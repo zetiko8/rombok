@@ -1,4 +1,4 @@
-import { LoadableResource } from '.';
+import { LoadableResource, LoadableRx } from '.';
 import { map, mergeMap, Observable, of, Subject, switchMap } from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
@@ -58,10 +58,12 @@ describe.only('LoadableResource', () => {
     it('should load the data, when a trigger happens', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const trigger$ = cold('--a', { a: tLoadArgs });
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
+        const load$ = cold('--a', { a: tResource });
   
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        expectObservable(loadable.data$).toBe('----a', { a: tResource });
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadPipe(mergeMap(() => load$));
+        expectObservable(obs$.data$).toBe('----a', { a: tResource });
       });
     });
   
@@ -69,54 +71,12 @@ describe.only('LoadableResource', () => {
       scheduler.run(({ cold, expectObservable }) => {
   
         const trigger$ = cold('--a--a', { a: tLoadArgs });
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
+        const load$ = cold('--a', { a: tResource });
   
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        expectObservable(loadable.data$).toBe('----a--a', { a: tResource });
-      });
-    });
-  
-    it('should load the data, when loadData is called', () => {
-      scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
-  
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn);
-        loadable.loadData(tLoadArgs);
-        expectObservable(loadable.data$).toBe('--a', { a: tResource });
-      });
-    });
-  
-    it('should load the data, when loadData is called twice', () => {
-      scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
-  
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn);
-        loadable.loadData(tLoadArgs);
-        cold('--a', dict).subscribe(() => loadable.loadData(tLoadArgs));
-        expectObservable(loadable.data$).toBe('--a-a', { a: tResource });
-      });
-    });
-  
-    it('should load the data, when loadData is called and when trigger is called', () => {
-      scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
-  
-        const trigger$ = cold('--a', { a: tLoadArgs });
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        loadable.loadData(tLoadArgs);
-        expectObservable(loadable.data$).toBe('--a-a', { a: tResource });
-      });
-    });
-  
-    it('should load the data, when loadData is called and when trigger is called twice', () => {
-      scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
-  
-        const trigger$ = cold('--a-----a', { a: tLoadArgs });
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        loadable.loadData(tLoadArgs);
-        cold('----a', dict).subscribe(() => loadable.loadData(tLoadArgs));
-        expectObservable(loadable.data$).toBe('--a-a-a---a', { a: tResource });
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadPipe(mergeMap(() => load$));
+        expectObservable(obs$.data$).toBe('----a--a', { a: tResource });
       });
     });
 
@@ -128,12 +88,12 @@ describe.only('LoadableResource', () => {
 
         it('normal switchMap', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const loadFn = (args: TLoadArgs) => cold('a', { a: tResource });
+            const load$ = cold('a', { a: tResource });
       
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
                 switchMap(() => cold(switchPattern, { a: tLoadArgs })),
-                mergeMap(() => loadFn(tLoadArgs)),
+                mergeMap(() => load$),
               );
             
             expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
@@ -143,15 +103,17 @@ describe.only('LoadableResource', () => {
 
         it('switchMap integration', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const loadFn = (args: TLoadArgs) => cold('a', { a: tResource });
+            const load$ = cold('a', { a: tResource });
       
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
                 switchMap(() => cold(switchPattern, { a: tLoadArgs })),
               );
             
-            const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);      
-            expectObservable(loadable.data$).toBe(expectedPattern, { a: tResource });
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadPipe(mergeMap(() => load$));      
+            expectObservable(obs$.data$).toBe(expectedPattern, { a: tResource });
           });
         });
       
@@ -164,11 +126,11 @@ describe.only('LoadableResource', () => {
 
         it('normal switchMap', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const loadFn = (args: TLoadArgs) => of('immediate').pipe(switchMap(() => cold(switchPattern, { a: tResource })));
+            const load$ = of('immediate').pipe(switchMap(() => cold(switchPattern, { a: tResource })));
       
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
-                switchMap(() => loadFn(tLoadArgs)),
+                switchMap(() => load$),
               );
             
             expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
@@ -178,15 +140,17 @@ describe.only('LoadableResource', () => {
 
         it('switchMap integration', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const loadFn = (args: TLoadArgs) => cold('a', { a: tResource });
+            const load$ = cold('a', { a: tResource });
       
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
                 switchMap(() => cold(switchPattern, { a: tLoadArgs })),
               );
             
-            const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);      
-            expectObservable(loadable.data$).toBe(expectedPattern, { a: tResource });
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadPipe(mergeMap(() => load$));      
+            expectObservable(obs$.data$).toBe(expectedPattern, { a: tResource });
           });
         });
       });
@@ -199,25 +163,13 @@ describe.only('LoadableResource', () => {
     it('should display a loader while data is loading', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const trigger$ = cold('--a', { a: tLoadArgs });
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
+        const load$ = cold('--a', { a: tResource });
   
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        loadable.data$.subscribe(); // TODO - remove
-        expectObservable(loadable.isLoading$).toBe('--t-f', { t: true, f: false  });
-      });
-    });
-    
-    it('should display a loader complicated case', () => {
-      scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('--a', { a: tResource });
-        
-        const trigger$ = cold('--a-----a', { a: tLoadArgs });
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);
-        loadable.data$.subscribe(); // TODO - remove
-        loadable.loadData(tLoadArgs);
-        cold('----a', dict).subscribe(() => loadable.loadData(tLoadArgs));
-        expectObservable(loadable.data$).toBe('--a-a-a---a', { a: tResource });
-        expectObservable(loadable.isLoading$).toBe('t-----f-t-f', { t: true, f: false  });
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadPipe(mergeMap(() => load$));
+        obs$.data$.subscribe(); // TODO - remove
+        expectObservable(obs$.isLoading$).toBe('--t-f', { t: true, f: false  });
       });
     });
 
@@ -226,16 +178,18 @@ describe.only('LoadableResource', () => {
       const switchPattern = '----a';
       const expectedPattern = '---------a';
       scheduler.run(({ cold, expectObservable }) => {
-        const loadFn = (args: TLoadArgs) => cold('a', { a: tResource });
+        const load$ = cold('a', { a: tResource });
     
         const trigger$ = cold(triggerPattern, { a: tLoadArgs })
           .pipe(
             switchMap(() => cold(switchPattern, { a: tLoadArgs })),
           );
         
-        const loadable = new LoadableResource<TResource[], TLoadArgs>(loadFn, trigger$);      
-        expectObservable(loadable.data$).toBe(expectedPattern, { a: tResource });
-        expectObservable(loadable.isLoading$).toBe('---------tf', { t: true, f: false  });
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadPipe(mergeMap(() => load$));      
+        expectObservable(obs$.data$).toBe(expectedPattern, { a: tResource });
+        expectObservable(obs$.isLoading$).toBe('---------tf', { t: true, f: false  });
       });
     });
 
