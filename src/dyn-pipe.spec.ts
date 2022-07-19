@@ -1,4 +1,3 @@
-import { LoadableResource } from '.';
 import { map, mergeMap, Observable, of, switchMap } from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';

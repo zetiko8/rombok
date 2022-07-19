@@ -55,3 +55,5 @@ export function pipeContext<T, O>(operatorFunction: OperatorFunction<T, O>) {
     });
   };
 }
+
+export const immediate$ = (): Observable<string> => of('immediate');

@@ -1,5 +1,19 @@
-import { BehaviorSubject, catchError, distinctUntilChanged, switchMap, first, map, merge, mergeMap, Observable, of, ReplaySubject, shareReplay, Subject, tap, throwError, OperatorFunction, ObservedValueOf } from 'rxjs';
-import { log, logObject, pipeContext } from './utils';
+import { 
+  BehaviorSubject, 
+  distinctUntilChanged, 
+  map, 
+  merge, 
+  Observable, 
+  ReplaySubject, 
+  shareReplay, 
+  Subject, 
+  tap, 
+  OperatorFunction, 
+  Observer, 
+  Subscription,
+  mergeMap,
+  of,
+} from 'rxjs';
 
 class LoadQueueItem {
   id: number | null;
@@ -50,7 +64,7 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
   ) {
     super();
     this.data$ = merge(
-      this.internalTrigger$,
+      this.internalTrigger$,  // TODO - think if necessary
       trigger$ || new Subject<LoadArguments>(),  
     ).pipe(
       map(args => {
@@ -60,20 +74,9 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
         return { loadQueueItem, value: args };
       }),
       tap(() => this.loadingError$.next(null)),
-      mergeMap(context => {
-        return of(context.value)
-          .pipe(
-            // switchMap(() => of(3 as unknown as Resource)),
-            pipe,
-            map(result => {
-              return { loadQueueItem: context.loadQueueItem, value: result };
-            }),
-          );
-      }),
-      tap(context => this.loadQueueRemove$.next(context.loadQueueItem)),
+      map(context => context.value),
+      pipe,
       tap(() => this.loadingError$.next(null)),
-      map(res => res.value),
-      shareReplay(1),
     );
 
     this.loadQueue$
@@ -84,8 +87,37 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
       .subscribe(bool => this.isLoading$.next(bool));
   }
 
-  async loadData (args: LoadArguments): Promise<void> {
-    this.internalTrigger$.next(args);
+  subscribe(observer?: Partial<Observer<Resource>> | undefined): Subscription;
+  subscribe(next: (value: Resource) => void): Subscription;
+  subscribe(next?: ((value: Resource) => void) | null | undefined, error?: ((error: any) => void) | null | undefined, complete?: (() => void) | null | undefined): Subscription;
+  subscribe(next?: unknown, error?: unknown, complete?: unknown): Subscription {
+    const observer: Partial<Observer<Resource>> = {};
+    if (next) {
+      const h = next as Partial<Observer<Resource>>;
+      if (
+        (h.next && typeof h.next == 'function')
+        || (h.error && typeof h.error == 'function')
+        || (h.complete && typeof h.complete == 'function')
+      ) {
+        observer.next = h.next?.bind(h);
+        observer.error = h.error?.bind(h);
+        observer.complete = h.complete?.bind(h);
+      } else {
+        if (next && typeof next === 'function') observer.next = next as any;
+        if (error && typeof error === 'function') observer.error = error as any;
+        if (complete && typeof complete === 'function') observer.complete = complete as any;
+      }
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      observer.next = () => {};
+    }
+    const sub$ = this.data$.subscribe(observer);  
+
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    return new Subscription(() => {
+      sub$.unsubscribe();
+    });
   }
 }
 export class LoadTrigger<Resource, LoadArguments> {
@@ -103,81 +135,4 @@ export class LoadableRx {
   static trigger<Resource, LoadArguments>(trigger$: Observable<LoadArguments>): LoadTrigger<Resource, LoadArguments> {
     return new LoadTrigger<Resource, LoadArguments>(trigger$);
   }
-}
-
-export class LoadableResource<Resource, LoadArguments> {
-    isLoading$ = new ReplaySubject<boolean>();
-    loadingError$ = new BehaviorSubject<Error | null>(null);
-    data$: Observable<Resource>;
-
-    private loadQueueAdd$ = new ReplaySubject<LoadQueueItem>();
-    private loadQueueRemove$ = new ReplaySubject<LoadQueueItem>();
-    private loadQueue: LoadQueueItem[] = [];
-    private loadQueue$ = 
-      merge(
-        this.loadQueueAdd$.pipe(map(item => ({ action: ACTION.ADD, item }))),
-        this.loadQueueRemove$.pipe(map(item => ({ action: ACTION.REMOVE, item }))),
-      ).pipe(
-        map(event => {
-          switch (event.action) {
-          case ACTION.ADD:
-            this.loadQueue.push(event.item);
-            break;
-          case ACTION.REMOVE:
-            this.loadQueue = this.loadQueue.filter(i => i !== event.item); 
-            break;          
-          default:
-            break;
-          }
-
-          return this.loadQueue;
-        }),
-        shareReplay(1),
-      );
-
-    private load: (args: LoadArguments) => Observable<Resource>;
-    private internalTrigger$ = new ReplaySubject<LoadArguments>(1);
-
-    constructor (
-      load: (args: LoadArguments) => Observable<Resource>,
-      trigger$?: Observable<LoadArguments>,
-    ) {
-      this.load = load;
-      this.data$ = merge(
-        this.internalTrigger$,
-        trigger$ || new Subject<LoadArguments>(),  
-      ).pipe(
-        mergeMap(loadArgs => this._loadData(loadArgs)),
-        shareReplay(1),
-      );
-
-      this.loadQueue$
-        .pipe(
-          map(queue => !!(queue.length)),
-          distinctUntilChanged(),
-        )
-        .subscribe(bool => this.isLoading$.next(bool));
-    }
-
-    private _loadData(args: LoadArguments) {
-      const r = Math.random();
-      const loadQueueItem = new LoadQueueItem(r);
-      return of('immediate')
-        .pipe(
-          tap(() => this.loadQueueAdd$.next(loadQueueItem)),
-          tap(() => this.loadingError$.next(null)),
-          mergeMap(() => this.load(args)),
-          tap(() => this.loadQueueRemove$.next(loadQueueItem)),
-          tap(() => this.loadingError$.next(null)),
-          catchError(error => {
-            this.loadQueueRemove$.next(loadQueueItem);
-            this.loadingError$.next(error);
-            return throwError(() => error);
-          }),
-        );
-    }
-
-    async loadData (args: LoadArguments): Promise<void> {
-      this.internalTrigger$.next(args);
-    }
 }
