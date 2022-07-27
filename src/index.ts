@@ -1,10 +1,8 @@
 import { 
   BehaviorSubject, 
   distinctUntilChanged, 
-  merge, 
   Observable, 
   ReplaySubject, 
-  Subject, 
   tap, 
   OperatorFunction, 
   Observer, 
@@ -98,12 +96,12 @@ class LoadContext {
 }
 
 export class LoadableObservable<Resource, LoadArguments> extends Observable<Resource> {
-  isLoading$ = new ReplaySubject<boolean>(1);
-  loadingError$ = new BehaviorSubject<Error | null>(null);
+  isLoading$: Observable<boolean>;
+  private _loadingError$ = new BehaviorSubject<Error | null>(null);
+  loadingError$ = this._loadingError$.asObservable();
   data$: Observable<Resource>;
 
   private loadContext: LoadContext;
-  private internalTrigger$ = new ReplaySubject<LoadArguments>(1);
 
   constructor (
     pipe: OperatorFunction<LoadArguments, Resource>,
@@ -112,20 +110,16 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
   ) {
     super();
     this.loadContext = new LoadContext(loadPipeOptions.loadStrategy);
-    this.data$ = merge(
-      this.internalTrigger$,  // TODO - think if necessary
-      trigger$ || new Subject<LoadArguments>(),  
-    ).pipe(
+    this.data$ = trigger$.pipe(
       tap(() => this.loadContext.registerLoading()),
-      tap(() => this.loadingError$.next(null)),
+      tap(() => this._loadingError$.next(null)),
       pipe,
-      tap(() => this.loadingError$.next(null)),
+      tap(() => this._loadingError$.next(null)),
       tap(() => this.loadContext.registerLoadEnd()),
     );
 
-    this.loadContext.isLoading$
-      .pipe(distinctUntilChanged())
-      .subscribe(bool => this.isLoading$.next(bool));
+    this.isLoading$ = this.loadContext.isLoading$
+      .pipe(distinctUntilChanged());
   }
 
   subscribe(observer?: Partial<Observer<Resource>> | undefined): Subscription;
@@ -155,7 +149,6 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
     const sub$ = this.data$.subscribe(observer);  
 
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     return new Subscription(() => {
       sub$.unsubscribe();
     });
