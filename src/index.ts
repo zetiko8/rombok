@@ -1,89 +1,130 @@
 import { 
   BehaviorSubject, 
   distinctUntilChanged, 
-  map, 
   merge, 
   Observable, 
   ReplaySubject, 
-  shareReplay, 
   Subject, 
   tap, 
   OperatorFunction, 
   Observer, 
   Subscription,
-  mergeMap,
-  of,
 } from 'rxjs';
 
-class LoadQueueItem {
-  id: number | null;
-  constructor (id: number | null = null) {
-    this.id = id;
+export enum LOAD_STRATEGY {
+  only_one_load_at_a_time = 'only_one_load_at_a_time',
+  default = 'default',
+}
+export interface LoadPipeOptions {
+  loadStrategy: LOAD_STRATEGY;
+}
+class ExecutingPipe {
+  private _hasEnded = false;
+  registerLoadPipeEnd () {
+    this._hasEnded = true;
+  }
+
+  get hasEnded () {
+    return this._hasEnded;
   }
 }
-enum ACTION {
-  REMOVE,
-  ADD,
+
+class OnlyOneLoadAtTimeLoadingContext {
+  private pipes: ExecutingPipe[] = [];
+
+  registerLoading () {
+    this.pipes.push(new ExecutingPipe());
+    this.setLoadingState();
+  }
+
+  registerLoadEnd () {
+    this.pipes[this.pipes.length - 1]?.registerLoadPipeEnd();
+    this.setLoadingState();
+  }
+
+  private setLoadingState () {
+    this._isLoading$.next(this.isLoading());
+  }
+  
+  private isLoading () {
+    if (!this.pipes.length) {
+      return false;
+    } else {
+      return !(this.pipes[this.pipes.length - 1]?.hasEnded); 
+    }
+  }
+
+  private _isLoading$ = new ReplaySubject<boolean>(1);
+  isLoading$ = this._isLoading$.asObservable();
+}
+class MultipleLoadsAtTimeLoadingContext {
+  private loadPipeCount = 0;
+
+  registerLoading () {
+    this.loadPipeCount++;
+    this.setLoadingState();
+  }
+
+  registerLoadEnd () {
+    this.loadPipeCount--;
+    this.setLoadingState();
+  }
+
+  private setLoadingState () {
+    this._isLoading$.next(this.isLoading());
+  }
+  
+  private isLoading () {
+    return this.loadPipeCount > 0;
+  }
+
+  private _isLoading$ = new ReplaySubject<boolean>(1);
+  isLoading$ = this._isLoading$.asObservable();
+}
+class LoadContext {
+  private _implementation: OnlyOneLoadAtTimeLoadingContext | MultipleLoadsAtTimeLoadingContext;
+  registerLoading: () => void;
+  registerLoadEnd: () => void;
+  isLoading$: Observable<boolean>
+
+  constructor (loadStrategy = LOAD_STRATEGY.default) {
+    if (loadStrategy === LOAD_STRATEGY.only_one_load_at_a_time) this._implementation = new OnlyOneLoadAtTimeLoadingContext();
+    else this._implementation = new MultipleLoadsAtTimeLoadingContext();
+    this.registerLoadEnd = this._implementation.registerLoadEnd.bind(this._implementation);
+    this.registerLoading = this._implementation.registerLoading.bind(this._implementation);
+    this.isLoading$ = this._implementation.isLoading$;
+  }
+
 }
 
 export class LoadableObservable<Resource, LoadArguments> extends Observable<Resource> {
-  isLoading$ = new ReplaySubject<boolean>();
+  isLoading$ = new ReplaySubject<boolean>(1);
   loadingError$ = new BehaviorSubject<Error | null>(null);
   data$: Observable<Resource>;
 
-  private loadQueueAdd$ = new ReplaySubject<LoadQueueItem>();
-  private loadQueueRemove$ = new ReplaySubject<LoadQueueItem>();
-  private loadQueue: LoadQueueItem[] = [];
-  private loadQueue$ = 
-    merge(
-      this.loadQueueAdd$.pipe(map(item => ({ action: ACTION.ADD, item }))),
-      this.loadQueueRemove$.pipe(map(item => ({ action: ACTION.REMOVE, item }))),
-    ).pipe(
-      map(event => {
-        switch (event.action) {
-        case ACTION.ADD:
-          this.loadQueue.push(event.item);
-          break;
-        case ACTION.REMOVE:
-          this.loadQueue = this.loadQueue.filter(i => i !== event.item); 
-          break;          
-        default:
-          break;
-        }
-
-        return this.loadQueue;
-      }),
-      shareReplay(1),
-    );
-
+  private loadContext: LoadContext;
   private internalTrigger$ = new ReplaySubject<LoadArguments>(1);
 
   constructor (
     pipe: OperatorFunction<LoadArguments, Resource>,
-    trigger$?: Observable<LoadArguments>,
+    trigger$: Observable<LoadArguments>,
+    loadPipeOptions: LoadPipeOptions,
   ) {
     super();
+    this.loadContext = new LoadContext(loadPipeOptions.loadStrategy);
     this.data$ = merge(
       this.internalTrigger$,  // TODO - think if necessary
       trigger$ || new Subject<LoadArguments>(),  
     ).pipe(
-      map(args => {
-        const r = Math.random();
-        const loadQueueItem = new LoadQueueItem(r);
-        this.loadQueueAdd$.next(loadQueueItem);
-        return { loadQueueItem, value: args };
-      }),
+      tap(() => this.loadContext.registerLoading()),
       tap(() => this.loadingError$.next(null)),
-      map(context => context.value),
       pipe,
       tap(() => this.loadingError$.next(null)),
+      tap(() => this.loadContext.registerLoadEnd()),
     );
 
-    this.loadQueue$
-      .pipe(
-        map(queue => !!(queue.length)),
-        distinctUntilChanged(),
-      )
+    this.loadContext.isLoading$
+      .pipe(distinctUntilChanged())
       .subscribe(bool => this.isLoading$.next(bool));
   }
 
@@ -127,8 +168,13 @@ export class LoadTrigger<Resource, LoadArguments> {
     this.trigger$ = trigger$;
   }
 
-  loadPipe (pipe: OperatorFunction<LoadArguments, Resource>): LoadableObservable<Resource, LoadArguments> {
-    return new LoadableObservable<Resource, LoadArguments>(pipe, this.trigger$);
+  loadPipe (
+    pipe: OperatorFunction<LoadArguments, Resource>, 
+    options: LoadPipeOptions = {
+      loadStrategy: LOAD_STRATEGY.default,
+    },
+  ): LoadableObservable<Resource, LoadArguments> {
+    return new LoadableObservable<Resource, LoadArguments>(pipe, this.trigger$, options);
   }
 }
 export class LoadableRx {

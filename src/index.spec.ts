@@ -1,4 +1,4 @@
-import { LoadableRx } from '.';
+import { LoadableRx, LOAD_STRATEGY } from '.';
 import { mergeMap, switchMap } from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
@@ -202,7 +202,7 @@ describe.only('LoadableResource', () => {
 
   });
 
-  describe.skip('Loader', () => {
+  describe('Loader', () => {
     it('should display a loader while data is loading', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const trigger$ = cold('--a', { a: tLoadArgs });
@@ -211,7 +211,7 @@ describe.only('LoadableResource', () => {
         const obs$ = LoadableRx
           .trigger(trigger$)
           .loadPipe(mergeMap(() => load$));
-        obs$.subscribe(); // TODO - remove
+        obs$.subscribe();
         expectObservable(obs$.isLoading$).toBe('--t-f', { t: true, f: false  });
       });
     });
@@ -229,23 +229,19 @@ describe.only('LoadableResource', () => {
       });
     });
 
-    it.skip('should display a loader switchMap case switch in loadFn)', () => { // not applicable (maybe not even testable)
+    it('should display a loader, switch map on loadFn', () => {
       const triggerPattern = '--a--a';
       const switchPattern = '----a';
       const expectedPattern = '---------a';
       scheduler.run(({ cold, expectObservable }) => {
-        const load$ = cold('a', { a: tResource });
-    
-        const trigger$ = cold(triggerPattern, { a: tLoadArgs })
-          .pipe(
-            switchMap(() => cold(switchPattern, { a: tLoadArgs })),
-          );
-        
+        const trigger$ = cold(triggerPattern, { a: tLoadArgs });
+        const load$ = cold(switchPattern, { a: tResource });
+  
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(mergeMap(() => load$));      
+          .loadPipe(switchMap(() => load$), { loadStrategy: LOAD_STRATEGY.only_one_load_at_a_time });      
         expectObservable(obs$).toBe(expectedPattern, { a: tResource });
-        expectObservable(obs$.isLoading$).toBe('---------tf', { t: true, f: false  });
+        expectObservable(obs$.isLoading$).toBe('--t------f', { t: true, f: false  });
       });
     });
 
