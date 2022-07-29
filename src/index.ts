@@ -1,8 +1,6 @@
 import {
-  BehaviorSubject, 
   Observable, 
   ReplaySubject,
-  OperatorFunction, 
   Observer, 
   Subscription,
   throwError,
@@ -32,7 +30,7 @@ export class LoadableRxError extends Error {
   type: ERROR = ERROR.unknown;
   originalError: Error;
   constructor(
-    message: string | Error | LoadableRxError | any,
+    message: string | Error | LoadableRxError | unknown,
     options: { type?: ERROR } = {},
   ) {
     super('');
@@ -192,6 +190,7 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
 
   subscribe(observer?: Partial<Observer<Resource>> | undefined): Subscription;
   subscribe(next: (value: Resource) => void): Subscription;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subscribe(next?: ((value: Resource) => void) | null | undefined, error?: ((error: any) => void) | null | undefined, complete?: (() => void) | null | undefined): Subscription;
   subscribe(next?: unknown, error?: unknown, complete?: unknown): Subscription {
     const observer: Partial<Observer<Resource>> = {};
@@ -206,8 +205,11 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
         observer.error = h.error?.bind(h);
         observer.complete = h.complete?.bind(h);
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (next && typeof next === 'function') observer.next = next as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (error && typeof error === 'function') observer.error = error as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (complete && typeof complete === 'function') observer.complete = complete as any;
       }
     } else {

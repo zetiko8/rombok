@@ -23,10 +23,12 @@ export function prepareTestScheduler (): TestScheduler {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function drawMarbleFromDefs (def: any) {
   console.log(def);
   let expectedMarble = '.';
   let expectedFrame = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   def.forEach((ev: any) => {
     if (ev.frame === 0) {
       expectedMarble = formatEventValue(ev);  
@@ -41,6 +43,7 @@ function drawMarbleFromDefs (def: any) {
   return expectedMarble;
 }
   
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatEventValue (ev: any): string {
   if (ev.notification.value !== undefined) {
     if (ev.notification.value === null) return '_';

@@ -1,8 +1,8 @@
 import { ERROR_STRATEGY, LoadableRx } from '.';
-import { mergeMap, switchMap, catchError, filter } from 'rxjs/operators';
+import { mergeMap, switchMap } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
-import { of, throwError, EMPTY } from 'rxjs';
+import { of, EMPTY } from 'rxjs';
 import { prepareTestScheduler, TLoadArgs } from './test.helpers';
 
 const tLoadArgs: TLoadArgs = { textContains: 'word' };
@@ -313,7 +313,7 @@ describe('LoadableResource', () => {
   
             obs$.subscribe({ 
               // eslint-disable-next-line @typescript-eslint/no-empty-function
-              error(err) {}, 
+              error() {}, 
             });
             expectObservable(obs$.loadingError$).toBe('n---e', { e: error, n: null });
           });
