@@ -3,15 +3,7 @@ import { mergeMap, switchMap, catchError, filter } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
 import { of, throwError, EMPTY } from 'rxjs';
-
-interface TResource {
-    id: number,
-    text: string,
-}
-
-interface TLoadArgs {
-    textContains: string,
-}
+import { prepareTestScheduler, TLoadArgs } from './test.helpers';
 
 const tLoadArgs: TLoadArgs = { textContains: 'word' };
 const tLoadArgsThatThrow: TLoadArgs = { textContains: 'throw-error' };
@@ -20,23 +12,7 @@ const tResource = 'a';
 describe('LoadableResource', () => {
 
   let scheduler: TestScheduler;
-
-  beforeEach(() => {
-    scheduler = new TestScheduler((actual, expected) => {
-      // console.log(expected);
-      // console.log(actual);
-      // console.log('E', drawMarbleFromDefs(expected));
-      // console.log('A', drawMarbleFromDefs(actual));
-      try {
-        expect(actual).to.eql(expected);
-      } catch (error) {
-        throw Error(`
-        E: ${drawMarbleFromDefs(expected)}
-        A: ${drawMarbleFromDefs(actual)}
-        `);
-      }
-    });
-  });
+  beforeEach(() => scheduler = prepareTestScheduler());
 
   describe('Loading data', () => {
     it('should load the data, when a trigger happens', () => {
@@ -379,32 +355,3 @@ describe('LoadableResource', () => {
   });
 
 });
-
-function drawMarbleFromDefs (def: any) {
-  console.log(def);
-  let expectedMarble = '.';
-  let expectedFrame = 0;
-  def.forEach((ev: any) => {
-    if (ev.frame === 0) {
-      expectedMarble = formatEventValue(ev);  
-    }
-    else {
-      if (ev.frame > expectedFrame) Array.from(new Array(ev.frame - (expectedFrame + 1))).forEach(() => expectedMarble += '.');
-      expectedMarble += formatEventValue(ev);
-    }
-    expectedFrame = ev.frame;
-
-  });
-  return expectedMarble;
-}
-
-function formatEventValue (ev: any): string {
-  if (ev.notification.value !== undefined) {
-    if (ev.notification.value === null) return '_';
-    if (ev.notification.value instanceof Error) return '€';
-    return ev.notification.value;
-  }
-  if (ev.notification.error !== undefined) return '#';
-  if (ev.notification.kind === 'C') return '|';
-  return 'What is this is should not happen';
-}
