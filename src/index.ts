@@ -14,7 +14,8 @@ import {
   mergeMap,
   switchMap,
 } from 'rxjs/operators';
-import { ERROR, ERROR_STRATEGY, LoadableRxError } from './error-handling';
+import { ERROR_STRATEGY } from './error-handling';
+import { handleError, handleLoadFunctionError, registerLoadingEndEvent, registerLoadingStartEvent } from './helpers';
 import { LoadContext, LOAD_STRATEGY } from './loading-handling';
 
 export interface LoadableObservableOptions {
@@ -28,42 +29,35 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
     .pipe(distinctUntilChanged());
   data$: Observable<Resource>;
 
-  private loadContext: LoadContext;
 
   constructor (
     loadFunction: (loadArguments: LoadArguments) => Observable<Resource>,
     trigger$: Observable<LoadArguments>,
-    LoadableObservableOptions: LoadableObservableOptions,
+    loadableObservableOptions: LoadableObservableOptions,
   ) {
     super();
-    this._loadingError$.next(null);
-    this.loadContext = new LoadContext(LoadableObservableOptions.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default);
-    const combinePipe = LoadableObservableOptions.switch ? switchMap : mergeMap;
-    this.data$ = trigger$.pipe(
-      // handle the triggers error - parse it so later you can know it's from the trigger and rethrow it
-      catchError(error => throwError(new LoadableRxError(error, { type: ERROR.triggerError }))),
-      tap(() => this.loadContext.registerLoading()),
-      tap(() => this._loadingError$.next(null)),
-      combinePipe(loadArguments => loadFunction(loadArguments)
-        .pipe(catchError(error => {
-          this._loadingError$.next(error);
-          if (LoadableObservableOptions.errorStrategy === ERROR_STRATEGY.non_terminating) return EMPTY;
-          else return throwError(error);
-        }))),
-      catchError(error => {
-        if (error.isLoadableRxError && error.type === ERROR.triggerError) {
-          this._loadingError$.next(error.originalError);
-          throw error.originalError;
-        } else {
-          this._loadingError$.next(error);
-          throw error;
-        }
-      }),
-      tap(() => this.loadContext.registerLoadEnd()),
-    );
+    const errorStrategy = loadableObservableOptions.errorStrategy || ERROR_STRATEGY.terminate;
+    const doSwitch = !!(loadableObservableOptions.switch);
+    const loadStrategy = doSwitch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default;
 
-    this.isLoading$ = this.loadContext.isLoading$
-      .pipe(distinctUntilChanged());
+    // setup initial error state
+    this._loadingError$.next(null);
+
+    // setup loading state
+    const loadContext = new LoadContext(loadStrategy);
+    this.isLoading$ = loadContext.isLoading$;
+
+    const combinePipe = doSwitch ? switchMap : mergeMap;
+    this.data$ = trigger$.pipe(
+      registerLoadingStartEvent(loadContext),
+      tap(() => this._loadingError$.next(null)),
+      combinePipe(loadArguments => 
+        loadFunction(loadArguments)
+          .pipe(handleLoadFunctionError(errorStrategy, this._loadingError$)),
+      ),
+      handleError(this._loadingError$),
+      registerLoadingEndEvent(loadContext),
+    );
   }
 
   subscribe(observer?: Partial<Observer<Resource>> | undefined): Subscription;

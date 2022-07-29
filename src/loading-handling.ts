@@ -1,4 +1,5 @@
 import { Observable, ReplaySubject } from 'rxjs';
+import { distinctUntilChanged } from 'rxjs/operators';
 
 export enum LOAD_STRATEGY {
   only_one_load_at_a_time = 'only_one_load_at_a_time',
@@ -87,6 +88,6 @@ export class LoadContext {
     this.registerLoading = this._implementation.registerLoading.bind(
       this._implementation,
     );
-    this.isLoading$ = this._implementation.isLoading$;
+    this.isLoading$ = this._implementation.isLoading$.pipe(distinctUntilChanged());
   }
 }
