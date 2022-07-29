@@ -271,14 +271,11 @@ describe('LoadableResource', () => {
       });
       it('test of non terminate pattern that does not throw an error, that the user needs to take care for', () => {
         scheduler.run(({ cold, expectObservable }) => {
-          const validateTrigger = (loadArgs: TLoadArgs) => loadArgs.textContains === 'throw-error' ? throwError(error) : of(loadArgs);
+          const validateTrigger = (loadArgs: TLoadArgs) => loadArgs.textContains === 'throw-error' ? EMPTY : of(loadArgs);
 
           const error = Error('Test error');
           const trigger$ = cold('--e--a', { a: tLoadArgs, e: tLoadArgsThatThrow }, error)
-            .pipe(
-              mergeMap(loadArgs => validateTrigger(loadArgs).pipe(catchError(() => of('ERROR_ENUM')))),
-              filter(response => response !== 'ERROR_ENUM'),
-            );
+            .pipe(mergeMap(loadArgs => validateTrigger(loadArgs)));
           const load$ = cold('--a', { a: tResource });
       
           const obs$ = LoadableRx
