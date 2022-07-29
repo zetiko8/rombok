@@ -14,135 +14,13 @@ import {
   mergeMap,
   switchMap,
 } from 'rxjs/operators';
+import { ERROR, ERROR_STRATEGY, LoadableRxError } from './error-handling';
+import { LoadContext, LOAD_STRATEGY } from './loading-handling';
 
-export enum ERROR_STRATEGY {
-  terminate = 'terminate',
-  non_terminating = 'non_terminating',
-}
-enum ERROR {
-  loadPipeError,
-  triggerError,
-  unknown,
-}
-
-export class LoadableRxError extends Error {
-  isLoadableRxError = true;
-  type: ERROR = ERROR.unknown;
-  originalError: Error;
-  constructor(
-    message: string | Error | LoadableRxError | unknown,
-    options: { type?: ERROR } = {},
-  ) {
-    super('');
-    if (message instanceof LoadableRxError || message instanceof Error) {
-      this.message = message.message;
-      this.stack = message.stack;
-      if (message instanceof LoadableRxError) {
-        this.originalError = message.originalError;
-        this.type = message.type;
-      } else {
-        this.originalError = message;
-      }
-    } else {
-      this.message = typeof message === 'string' ? message : 'Unknown';
-      this.originalError = new Error();
-      this.originalError.stack = this.stack;
-      this.originalError.message = this.message;
-    } 
-
-    if (options.type !== undefined) {
-      this.type = options.type;
-    }
-  }
-}
-
-export enum LOAD_STRATEGY {
-  only_one_load_at_a_time = 'only_one_load_at_a_time',
-  default = 'default',
-}
-export interface LoadPipeOptions {
+export interface LoadableObservableOptions {
   switch?: boolean;
-  errorStrategy?: ERROR_STRATEGY,
+  errorStrategy?: ERROR_STRATEGY;
 }
-class ExecutingPipe {
-  private _hasEnded = false;
-  registerLoadPipeEnd () {
-    this._hasEnded = true;
-  }
-
-  get hasEnded () {
-    return this._hasEnded;
-  }
-}
-
-class OnlyOneLoadAtTimeLoadingContext {
-  private pipes: ExecutingPipe[] = [];
-
-  registerLoading () {
-    this.pipes.push(new ExecutingPipe());
-    this.setLoadingState();
-  }
-
-  registerLoadEnd () {
-    this.pipes[this.pipes.length - 1]?.registerLoadPipeEnd();
-    this.setLoadingState();
-  }
-
-  private setLoadingState () {
-    this._isLoading$.next(this.isLoading());
-  }
-  
-  private isLoading () {
-    if (!this.pipes.length) {
-      return false;
-    } else {
-      return !(this.pipes[this.pipes.length - 1]?.hasEnded); 
-    }
-  }
-
-  private _isLoading$ = new ReplaySubject<boolean>(1);
-  isLoading$ = this._isLoading$.asObservable();
-}
-class MultipleLoadsAtTimeLoadingContext {
-  private loadPipeCount = 0;
-
-  registerLoading () {
-    this.loadPipeCount++;
-    this.setLoadingState();
-  }
-
-  registerLoadEnd () {
-    this.loadPipeCount--;
-    this.setLoadingState();
-  }
-
-  private setLoadingState () {
-    this._isLoading$.next(this.isLoading());
-  }
-  
-  private isLoading () {
-    return this.loadPipeCount > 0;
-  }
-
-  private _isLoading$ = new ReplaySubject<boolean>(1);
-  isLoading$ = this._isLoading$.asObservable();
-}
-class LoadContext {
-  private _implementation: OnlyOneLoadAtTimeLoadingContext | MultipleLoadsAtTimeLoadingContext;
-  registerLoading: () => void;
-  registerLoadEnd: () => void;
-  isLoading$: Observable<boolean>
-
-  constructor (loadStrategy = LOAD_STRATEGY.default) {
-    if (loadStrategy === LOAD_STRATEGY.only_one_load_at_a_time) this._implementation = new OnlyOneLoadAtTimeLoadingContext();
-    else this._implementation = new MultipleLoadsAtTimeLoadingContext();
-    this.registerLoadEnd = this._implementation.registerLoadEnd.bind(this._implementation);
-    this.registerLoading = this._implementation.registerLoading.bind(this._implementation);
-    this.isLoading$ = this._implementation.isLoading$;
-  }
-
-}
-
 export class LoadableObservable<Resource, LoadArguments> extends Observable<Resource> {
   isLoading$: Observable<boolean>;
   private _loadingError$ = new ReplaySubject<Error | null>(1);
@@ -155,12 +33,12 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
   constructor (
     loadFunction: (loadArguments: LoadArguments) => Observable<Resource>,
     trigger$: Observable<LoadArguments>,
-    loadPipeOptions: LoadPipeOptions,
+    LoadableObservableOptions: LoadableObservableOptions,
   ) {
     super();
     this._loadingError$.next(null);
-    this.loadContext = new LoadContext(loadPipeOptions.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default);
-    const combinePipe = loadPipeOptions.switch ? switchMap : mergeMap;
+    this.loadContext = new LoadContext(LoadableObservableOptions.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default);
+    const combinePipe = LoadableObservableOptions.switch ? switchMap : mergeMap;
     this.data$ = trigger$.pipe(
       // handle the triggers error - parse it so later you can know it's from the trigger and rethrow it
       catchError(error => throwError(new LoadableRxError(error, { type: ERROR.triggerError }))),
@@ -169,7 +47,7 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
       combinePipe(loadArguments => loadFunction(loadArguments)
         .pipe(catchError(error => {
           this._loadingError$.next(error);
-          if (loadPipeOptions.errorStrategy === ERROR_STRATEGY.non_terminating) return EMPTY;
+          if (LoadableObservableOptions.errorStrategy === ERROR_STRATEGY.non_terminating) return EMPTY;
           else return throwError(error);
         }))),
       catchError(error => {
@@ -233,7 +111,7 @@ export class LoadTrigger<Resource, LoadArguments> {
   
   loadFunction (
     loadFunction: (loadArguments: LoadArguments) => Observable<Resource>, 
-    options: LoadPipeOptions = {
+    options: LoadableObservableOptions = {
       switch: false,
       errorStrategy: ERROR_STRATEGY.terminate,
     },

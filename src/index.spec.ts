@@ -1,4 +1,5 @@
-import { ERROR_STRATEGY, LoadableRx } from '.';
+import { LoadableRx } from '.';
+import { ERROR_STRATEGY } from './error-handling';
 import { mergeMap, switchMap } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
