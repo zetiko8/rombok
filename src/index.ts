@@ -1,20 +1,70 @@
-import { 
+import {
   BehaviorSubject, 
-  distinctUntilChanged, 
   Observable, 
-  ReplaySubject, 
-  tap, 
+  ReplaySubject,
   OperatorFunction, 
   Observer, 
   Subscription,
+  throwError,
+  EMPTY,
 } from 'rxjs';
+
+import {
+  tap,
+  catchError,
+  distinctUntilChanged,
+  mergeMap,
+  switchMap,
+} from 'rxjs/operators';
+
+export enum ERROR_STRATEGY {
+  terminate = 'terminate',
+  non_terminating = 'non_terminating',
+}
+enum ERROR {
+  loadPipeError,
+  triggerError,
+  unknown,
+}
+
+export class LoadableRxError extends Error {
+  isLoadableRxError = true;
+  type: ERROR = ERROR.unknown;
+  originalError: Error;
+  constructor(
+    message: string | Error | LoadableRxError | any,
+    options: { type?: ERROR } = {},
+  ) {
+    super('');
+    if (message instanceof LoadableRxError || message instanceof Error) {
+      this.message = message.message;
+      this.stack = message.stack;
+      if (message instanceof LoadableRxError) {
+        this.originalError = message.originalError;
+        this.type = message.type;
+      } else {
+        this.originalError = message;
+      }
+    } else {
+      this.message = typeof message === 'string' ? message : 'Unknown';
+      this.originalError = new Error();
+      this.originalError.stack = this.stack;
+      this.originalError.message = this.message;
+    } 
+
+    if (options.type !== undefined) {
+      this.type = options.type;
+    }
+  }
+}
 
 export enum LOAD_STRATEGY {
   only_one_load_at_a_time = 'only_one_load_at_a_time',
   default = 'default',
 }
 export interface LoadPipeOptions {
-  loadStrategy: LOAD_STRATEGY;
+  switch?: boolean;
+  errorStrategy?: ERROR_STRATEGY,
 }
 class ExecutingPipe {
   private _hasEnded = false;
@@ -97,24 +147,42 @@ class LoadContext {
 
 export class LoadableObservable<Resource, LoadArguments> extends Observable<Resource> {
   isLoading$: Observable<boolean>;
-  private _loadingError$ = new BehaviorSubject<Error | null>(null);
-  loadingError$ = this._loadingError$.asObservable();
+  private _loadingError$ = new ReplaySubject<Error | null>(1);
+  loadingError$ = this._loadingError$
+    .pipe(distinctUntilChanged());
   data$: Observable<Resource>;
 
   private loadContext: LoadContext;
 
   constructor (
-    pipe: OperatorFunction<LoadArguments, Resource>,
+    loadFunction: (loadArguments: LoadArguments) => Observable<Resource>,
     trigger$: Observable<LoadArguments>,
     loadPipeOptions: LoadPipeOptions,
   ) {
     super();
-    this.loadContext = new LoadContext(loadPipeOptions.loadStrategy);
+    this._loadingError$.next(null);
+    this.loadContext = new LoadContext(loadPipeOptions.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default);
+    const combinePipe = loadPipeOptions.switch ? switchMap : mergeMap;
     this.data$ = trigger$.pipe(
+      // handle the triggers error - parse it so later you can know it's from the trigger and rethrow it
+      catchError(error => throwError(new LoadableRxError(error, { type: ERROR.triggerError }))),
       tap(() => this.loadContext.registerLoading()),
       tap(() => this._loadingError$.next(null)),
-      pipe,
-      tap(() => this._loadingError$.next(null)),
+      combinePipe(loadArguments => loadFunction(loadArguments)
+        .pipe(catchError(error => {
+          this._loadingError$.next(error);
+          if (loadPipeOptions.errorStrategy === ERROR_STRATEGY.non_terminating) return EMPTY;
+          else return throwError(error);
+        }))),
+      catchError(error => {
+        if (error.isLoadableRxError && error.type === ERROR.triggerError) {
+          this._loadingError$.next(error.originalError);
+          throw error.originalError;
+        } else {
+          this._loadingError$.next(error);
+          throw error;
+        }
+      }),
       tap(() => this.loadContext.registerLoadEnd()),
     );
 
@@ -160,14 +228,15 @@ export class LoadTrigger<Resource, LoadArguments> {
   constructor (trigger$: Observable<LoadArguments>) {
     this.trigger$ = trigger$;
   }
-
-  loadPipe (
-    pipe: OperatorFunction<LoadArguments, Resource>, 
+  
+  loadFunction (
+    loadFunction: (loadArguments: LoadArguments) => Observable<Resource>, 
     options: LoadPipeOptions = {
-      loadStrategy: LOAD_STRATEGY.default,
+      switch: false,
+      errorStrategy: ERROR_STRATEGY.terminate,
     },
   ): LoadableObservable<Resource, LoadArguments> {
-    return new LoadableObservable<Resource, LoadArguments>(pipe, this.trigger$, options);
+    return new LoadableObservable<Resource, LoadArguments>(loadFunction, this.trigger$, options);
   }
 }
 export class LoadableRx {

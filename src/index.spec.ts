@@ -1,7 +1,8 @@
-import { LoadableRx, LOAD_STRATEGY } from '.';
-import { mergeMap, switchMap } from 'rxjs';
+import { ERROR_STRATEGY, LoadableRx } from '.';
+import { mergeMap, switchMap, catchError, filter } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { expect } from 'chai';
+import { of, throwError, EMPTY } from 'rxjs';
 
 interface TResource {
     id: number,
@@ -13,9 +14,10 @@ interface TLoadArgs {
 }
 
 const tLoadArgs: TLoadArgs = { textContains: 'word' };
+const tLoadArgsThatThrow: TLoadArgs = { textContains: 'throw-error' };
 const tResource = 'a';
 
-describe.only('LoadableResource', () => {
+describe('LoadableResource', () => {
 
   let scheduler: TestScheduler;
 
@@ -44,7 +46,7 @@ describe.only('LoadableResource', () => {
   
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(mergeMap(() => load$));
+          .loadFunction(() => load$);
         expectObservable(obs$).toBe('----a', { a: tResource });
       });
     });
@@ -57,8 +59,24 @@ describe.only('LoadableResource', () => {
   
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(mergeMap(() => load$));
+          .loadFunction(() => load$);
         expectObservable(obs$).toBe('----a--a', { a: tResource });
+      });
+    });
+
+    it('the load pipe should get the correct parameters', () => {
+      scheduler.run(({ cold, expectObservable }) => {
+  
+        const trigger$ = cold('--a', { a: tLoadArgs });
+        const load$ = cold('--a', { a: tResource });
+  
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(args => {
+            expect(args.textContains).to.equal('word');
+            return load$;
+          });
+        expectObservable(obs$).toBe('----a', { a: tResource });
       });
     });
 
@@ -93,7 +111,7 @@ describe.only('LoadableResource', () => {
             
             const obs$ = LoadableRx
               .trigger(trigger$)
-              .loadPipe(mergeMap(() => load$));      
+              .loadFunction(() => load$);      
             expectObservable(obs$).toBe(expectedPattern, { a: tResource });
           });
         });
@@ -124,7 +142,7 @@ describe.only('LoadableResource', () => {
       
             const obs$ = LoadableRx
               .trigger(trigger$)
-              .loadPipe(switchMap(() => load$));      
+              .loadFunction(() => load$, { switch: true });      
             expectObservable(obs$).toBe(expectedPattern, { a: tResource });
           });
         });
@@ -161,7 +179,7 @@ describe.only('LoadableResource', () => {
               
               const obs$ = LoadableRx
                 .trigger(trigger$)
-                .loadPipe(mergeMap(() => load$));      
+                .loadFunction(() => load$);      
               expectObservable(obs$).toBe(expectedPattern, { a: tResource });
             });
           });
@@ -192,7 +210,7 @@ describe.only('LoadableResource', () => {
         
               const obs$ = LoadableRx
                 .trigger(trigger$)
-                .loadPipe(mergeMap(() => load$));      
+                .loadFunction(() => load$);      
               expectObservable(obs$).toBe(expectedPattern, { a: tResource });
             });
           });
@@ -210,7 +228,7 @@ describe.only('LoadableResource', () => {
   
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(mergeMap(() => load$));
+          .loadFunction(() => load$);
         obs$.subscribe();
         expectObservable(obs$.isLoading$).toBe('--t-f', { t: true, f: false  });
       });
@@ -223,7 +241,7 @@ describe.only('LoadableResource', () => {
         const trigger$ = cold('a-a-a---a', { a: tLoadArgs });
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(mergeMap(() => load$));  
+          .loadFunction(() => load$);  
         expectObservable(obs$).toBe('--a-a-a---a', { a: tResource });
         expectObservable(obs$.isLoading$).toBe('t-----f-t-f', { t: true, f: false  });
       });
@@ -239,7 +257,7 @@ describe.only('LoadableResource', () => {
   
         const obs$ = LoadableRx
           .trigger(trigger$)
-          .loadPipe(switchMap(() => load$), { loadStrategy: LOAD_STRATEGY.only_one_load_at_a_time });      
+          .loadFunction(() => load$, { switch: true });      
         expectObservable(obs$).toBe(expectedPattern, { a: tResource });
         expectObservable(obs$.isLoading$).toBe('--t------f', { t: true, f: false  });
       });
@@ -247,22 +265,146 @@ describe.only('LoadableResource', () => {
 
   });
 
+  describe('Error handling', () => {
+    describe('error on trigger', () => {
+      it('should throw an error', () => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const error = Error('Test error');
+          const trigger$ = cold('--#', { a: tLoadArgs }, error);
+          const load$ = cold('--a', { a: tResource });
+      
+          const obs$ = LoadableRx
+            .trigger(trigger$)
+            .loadFunction(() => load$);
+          expectObservable(obs$).toBe('--#', { a: tResource }, error);
+          expectObservable(obs$.loadingError$).toBe('n-e', { e: error, n: null });
+        });
+      });
+      it('should terminate the stream', () => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const error = Error('Test error');
+          const trigger$ = cold('--#--a', { a: tLoadArgs }, error);
+          const load$ = cold('--a', { a: tResource });
+      
+          const obs$ = LoadableRx
+            .trigger(trigger$)
+            .loadFunction(() => load$);
+          expectObservable(obs$).toBe('--#', { a: tResource }, error);
+          expectObservable(obs$.loadingError$).toBe('n-e', { e: error, n: null });
+        });
+      });
+      it('test of non terminate pattern that does not throw an error, that the user needs to take care for', () => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const validateTrigger = (loadArgs: TLoadArgs) => loadArgs.textContains === 'throw-error' ? throwError(error) : of(loadArgs);
+
+          const error = Error('Test error');
+          const trigger$ = cold('--e--a', { a: tLoadArgs, e: tLoadArgsThatThrow }, error)
+            .pipe(
+              mergeMap(loadArgs => validateTrigger(loadArgs).pipe(catchError(() => of('ERROR_ENUM')))),
+              filter(response => response !== 'ERROR_ENUM'),
+            );
+          const load$ = cold('--a', { a: tResource });
+      
+          const obs$ = LoadableRx
+            .trigger(trigger$)
+            .loadFunction(() => load$);
+          expectObservable(obs$).toBe('-------a', { a: tResource }, error);
+          expectObservable(obs$.loadingError$).toBe('n', { e: error, n: null });
+        });
+      });
+    });
+    describe('error on loadFunction', () => {
+      describe('test of ERROR_STRATEGY.terminate', () => {
+        it('should throw an error', () => {
+          scheduler.run(({ cold, expectObservable }) => {
+            const error = Error('Test error');
+            const trigger$ = cold('--a--a', { a: tLoadArgs });
+            const load$ = cold('--#', { a: tResource }, error);
+            
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(() => load$);
+  
+            expectObservable(obs$).toBe('----#', { a: tResource }, error);
+          });
+        });
+        it('should terminate the stream', () => {
+          scheduler.run(({ cold, expectObservable }) => {
+            const error = Error('Test error');
+            const trigger$ = cold('--a--a', { a: tLoadArgs });
+            const load$ = cold('--#', { a: tResource }, error);
+            
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(() => load$);
+  
+            obs$.subscribe({ 
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              error(err) {}, 
+            });
+            expectObservable(obs$.loadingError$).toBe('n---e', { e: error, n: null });
+          });
+        });
+      });
+      describe('test of ERROR_STRATEGY.non_terminating', () => {
+        it('should not throw an error', () => {
+          scheduler.run(({ cold, expectObservable }) => {
+            const error = Error('Test error');
+            const trigger$ = cold('--a--a', { a: tLoadArgs });
+            const load$ = cold('--#', { a: tResource }, error);
+            
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
+  
+            expectObservable(obs$).toBe('-----', { a: tResource }, error);
+          });
+        });
+        it('should not terminate the stream', () => {
+          scheduler.run(({ cold, expectObservable }) => {
+            const error = Error('Test error');
+            const trigger$ = cold('--a--a', { a: tLoadArgs });
+            const load$ = cold('--#', { a: tResource }, error);
+            
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
+  
+            obs$.subscribe();
+            expectObservable(obs$.loadingError$).toBe('n---en-e', { e: error, n: null });
+          });
+        });
+      });
+    });
+  });
+
 });
 
 function drawMarbleFromDefs (def: any) {
   console.log(def);
-  let expectedMarble = '-';
+  let expectedMarble = '.';
   let expectedFrame = 0;
   def.forEach((ev: any) => {
     if (ev.frame === 0) {
-      expectedMarble = ev.notification.value;  
+      expectedMarble = formatEventValue(ev);  
     }
     else {
-      if (ev.frame > expectedFrame) Array.from(new Array(ev.frame - (expectedFrame + 1))).forEach(tick => expectedMarble += '-');
-      expectedMarble += ev.notification.value;
+      if (ev.frame > expectedFrame) Array.from(new Array(ev.frame - (expectedFrame + 1))).forEach(() => expectedMarble += '.');
+      expectedMarble += formatEventValue(ev);
     }
     expectedFrame = ev.frame;
 
   });
   return expectedMarble;
+}
+
+function formatEventValue (ev: any): string {
+  if (ev.notification.value !== undefined) {
+    if (ev.notification.value === null) return '_';
+    if (ev.notification.value instanceof Error) return '€';
+    return ev.notification.value;
+  }
+  if (ev.notification.error !== undefined) return '#';
+  if (ev.notification.kind === 'C') return '|';
+  return 'What is this is should not happen';
 }
