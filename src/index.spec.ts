@@ -1,10 +1,17 @@
 import { LoadableRx } from '.';
 import { ERROR_STRATEGY } from './error-handling';
-import { mergeMap, switchMap } from 'rxjs/operators';
+import { mergeMap, switchMap, shareReplay } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
-import { expect } from 'chai';
+import * as chai from 'chai';
+import { createSandbox, SinonSandbox } from 'sinon';
+import * as sinonChai from 'sinon-chai';
 import { of, EMPTY } from 'rxjs';
-import { prepareTestScheduler, TLoadArgs } from './test.helpers';
+import { getSpyWrapper, ignoreErrorSub, prepareTestScheduler, TestError, TLoadArgs } from './test.helpers';
+import { logger } from './debug-helpers';
+chai.use(sinonChai);
+const expect = chai.expect;
+
+logger.logLevel = 3;
 
 const tLoadArgs: TLoadArgs = { textContains: 'word' };
 const tLoadArgsThatThrow: TLoadArgs = { textContains: 'throw-error' };
@@ -13,7 +20,15 @@ const tResource = 'a';
 describe('LoadableResource', () => {
 
   let scheduler: TestScheduler;
-  beforeEach(() => scheduler = prepareTestScheduler());
+  let sbx: SinonSandbox;
+  beforeEach(() => {
+    scheduler = prepareTestScheduler();
+    sbx = createSandbox();
+  });
+  afterEach(() => {
+    scheduler = prepareTestScheduler();
+    sbx.restore();
+  });
 
   describe('Loading data', () => {
     it('should load the data, when a trigger happens', () => {
@@ -195,6 +210,75 @@ describe('LoadableResource', () => {
       });
     });
 
+    describe('shareReplay integration', () => {
+      describe('no loadableRx', () => {
+        it('no share replay', () => {
+          const spyWrapper = getSpyWrapper(sbx);
+          const spy = spyWrapper.spy;
+          scheduler.run(({ cold, expectObservable }) => {
+            const trigger$ = cold('--a', { a: tLoadArgs });
+            const load$ = cold('--a', { a: tResource });
+            spyWrapper.setFn(() => load$);
+            
+            const obs$ = trigger$.pipe(mergeMap(spy));
+            expectObservable(obs$).toBe('----a', { a: tResource });
+            expectObservable(obs$).toBe('----a', { a: tResource });
+  
+          });
+          expect(spy).to.have.been.calledTwice;
+        });
+        it('normal share replay', () => {
+          const spyWrapper = getSpyWrapper(sbx);
+          const spy = spyWrapper.spy;
+          scheduler.run(({ cold, expectObservable }) => {
+            const trigger$ = cold('--a', { a: tLoadArgs });
+            const load$ = cold('--a', { a: tResource });
+            spyWrapper.setFn(() => load$);
+            
+            const obs$ = trigger$.pipe(mergeMap(spy), shareReplay(1));
+            expectObservable(obs$).toBe('----a', { a: tResource });
+            expectObservable(obs$).toBe('----a', { a: tResource });
+  
+          });
+          expect(spy).to.have.been.calledOnce;
+        });
+      });
+      describe('integration', () => {
+        it('no share replay', () => {
+          const spyWrapper = getSpyWrapper(sbx);
+          const spy = spyWrapper.spy;
+          scheduler.run(({ cold, expectObservable }) => {
+            const trigger$ = cold('--a', { a: tLoadArgs });
+            const load$ = cold('--a', { a: tResource });
+            spyWrapper.setFn(() => load$);
+      
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(spy);
+            expectObservable(obs$).toBe('----a', { a: tResource });
+            expectObservable(obs$).toBe('----a', { a: tResource });
+          });
+          expect(spy).to.have.been.calledTwice;
+        });
+        it('share replay', () => {
+          const spyWrapper = getSpyWrapper(sbx);
+          const spy = spyWrapper.spy;
+          scheduler.run(({ cold, expectObservable }) => {
+            const trigger$ = cold('--a', { a: tLoadArgs });
+            const load$ = cold('--a', { a: tResource });
+            spyWrapper.setFn(() => load$);
+      
+            const obs$ = LoadableRx
+              .trigger(trigger$)
+              .loadFunction(spy)
+              .pipe(shareReplay(1));
+            expectObservable(obs$).toBe('----a', { a: tResource });
+            expectObservable(obs$).toBe('----a', { a: tResource });
+          });
+          expect(spy).to.have.been.calledOnce;
+        });
+      });
+    });
   });
 
   describe('Loader', () => {
@@ -240,13 +324,32 @@ describe('LoadableResource', () => {
       });
     });
 
+    it('switchMap integration', () => {
+      const triggerPattern = '--a--a';
+      const switchPattern = '----a';
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const load$ = cold('a', { a: tResource }, error);
+  
+        const trigger$ = cold(triggerPattern, { a: tLoadArgs })
+          .pipe(switchMap(() => cold(switchPattern, { a: tLoadArgs })));
+        
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$);
+
+        obs$.subscribe(ignoreErrorSub);
+        expectObservable(obs$.isLoading$).toBe('---------(tf)', { t: true, f: false  });
+      });
+    });
+
   });
 
   describe('Error handling', () => {
     describe('error on trigger', () => {
       it('should throw an error', () => {
         scheduler.run(({ cold, expectObservable }) => {
-          const error = Error('Test error');
+          const error = new TestError('Test error');
           const trigger$ = cold('--#', { a: tLoadArgs }, error);
           const load$ = cold('--a', { a: tResource });
       
@@ -259,7 +362,7 @@ describe('LoadableResource', () => {
       });
       it('should terminate the stream', () => {
         scheduler.run(({ cold, expectObservable }) => {
-          const error = Error('Test error');
+          const error = new TestError('Test error');
           const trigger$ = cold('--#--a', { a: tLoadArgs }, error);
           const load$ = cold('--a', { a: tResource });
       
@@ -274,7 +377,7 @@ describe('LoadableResource', () => {
         scheduler.run(({ cold, expectObservable }) => {
           const validateTrigger = (loadArgs: TLoadArgs) => loadArgs.textContains === 'throw-error' ? EMPTY : of(loadArgs);
 
-          const error = Error('Test error');
+          const error = new TestError('Test error');
           const trigger$ = cold('--e--a', { a: tLoadArgs, e: tLoadArgsThatThrow }, error)
             .pipe(mergeMap(loadArgs => validateTrigger(loadArgs)));
           const load$ = cold('--a', { a: tResource });
@@ -291,7 +394,7 @@ describe('LoadableResource', () => {
       describe('test of ERROR_STRATEGY.terminate', () => {
         it('should throw an error', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const error = Error('Test error');
+            const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
             
@@ -304,7 +407,7 @@ describe('LoadableResource', () => {
         });
         it('should terminate the stream', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const error = Error('Test error');
+            const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
             
@@ -312,10 +415,7 @@ describe('LoadableResource', () => {
               .trigger(trigger$)
               .loadFunction(() => load$);
   
-            obs$.subscribe({ 
-              // eslint-disable-next-line @typescript-eslint/no-empty-function
-              error() {}, 
-            });
+            obs$.subscribe(ignoreErrorSub);
             expectObservable(obs$.loadingError$).toBe('n---e', { e: error, n: null });
           });
         });
@@ -323,7 +423,7 @@ describe('LoadableResource', () => {
       describe('test of ERROR_STRATEGY.non_terminating', () => {
         it('should not throw an error', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const error = Error('Test error');
+            const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
             
@@ -336,7 +436,7 @@ describe('LoadableResource', () => {
         });
         it('should not terminate the stream', () => {
           scheduler.run(({ cold, expectObservable }) => {
-            const error = Error('Test error');
+            const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
             
@@ -348,6 +448,88 @@ describe('LoadableResource', () => {
             expectObservable(obs$.loadingError$).toBe('n---en-e', { e: error, n: null });
           });
         });
+      });
+    });
+  });
+
+  describe('Error + Loading', () => {
+    it('not start loading if an error is thrown in trigger', () => {
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const trigger$ = cold('--#', { a: tLoadArgs }, error);
+        const load$ = cold('--a', { a: tResource });
+    
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$);
+        obs$.subscribe(ignoreErrorSub);
+
+        expectObservable(obs$.isLoading$).toBe('', { t: true, f: false  });
+      });
+    });
+    it('should stop loading if an error is thrown', () => {
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const trigger$ = cold('--a--a', { a: tLoadArgs });
+        const load$ = cold('--#', { a: tResource }, error);
+        
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$);
+
+        obs$.subscribe(ignoreErrorSub);
+        expectObservable(obs$.isLoading$).toBe('--t-f', { t: true, f: false  });
+      });
+    });
+    it('should stop loading if an error is thrown, but start loading again on second trigger', () => {
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const trigger$ = cold('--a--a', { a: tLoadArgs });
+        const load$ = cold('--#', { a: tResource }, error);
+        
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
+
+        obs$.subscribe();
+        expectObservable(obs$.loadingError$).toBe('n---en-e', { e: error, n: null });
+        expectObservable(obs$.isLoading$).toBe('--t-ft-f', { t: true, f: false  });
+      });
+    });
+
+    it('should display a loader, switch map on loadFn + error', () => {
+      const triggerPattern = '--a--a';
+      const switchPattern = '----#';
+      const expectedPattern = '---------a';
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const trigger$ = cold(triggerPattern, { a: tLoadArgs });
+        const load$ = cold(switchPattern, { a: tResource }, error);
+  
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$, { switch: true });      
+        obs$.subscribe(ignoreErrorSub);
+        expectObservable(obs$.isLoading$).toBe('--t------f', { t: true, f: false  });
+      });
+    });
+
+    it('should display a loader, switch map on trigger$ + error', () => {
+      const triggerPattern = '--a--a';
+      const switchPattern = '----a';
+      scheduler.run(({ cold, expectObservable }) => {
+        const error = new TestError('Test error');
+        const load$ = cold('#', { a: tResource }, error);
+  
+        const trigger$ = cold(triggerPattern, { a: tLoadArgs })
+          .pipe(switchMap(() => cold(switchPattern, { a: tLoadArgs })));
+        
+        const obs$ = LoadableRx
+          .trigger(trigger$)
+          .loadFunction(() => load$);
+
+        obs$.subscribe(ignoreErrorSub);
+        expectObservable(obs$.isLoading$).toBe('---------(tf)', { t: true, f: false  });
       });
     });
   });

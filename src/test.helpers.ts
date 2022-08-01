@@ -1,13 +1,39 @@
 import { TestScheduler } from 'rxjs/testing';
-import { expect } from 'chai';
+import { Observable } from 'rxjs';
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+import { SinonSandbox, SinonSpy } from 'sinon';
+chai.use(sinonChai);
+const expect = chai.expect;
 
 export interface TResource {
-    id: number,
-    text: string,
+  id: number,
+  text: string,
 }
 
 export interface TLoadArgs {
-    textContains: string,
+  textContains: string,
+}
+
+export function getSpyWrapper(sinon: SinonSandbox): {
+    fn: (args: TLoadArgs) => Observable<any>,
+    setFn: (fn: (args: TLoadArgs) => Observable<any>) => void,
+    spy: SinonSpy,
+  } {
+  let fn: (args: TLoadArgs) => Observable<any>;
+  const setFn = (fnn: (args: TLoadArgs) => Observable<any>) => {
+    fn = fnn;
+  };
+
+  const _fn = (args: TLoadArgs) => {
+    return fn(args);
+  };
+  const spy = sinon.spy(_fn);
+  return {
+    fn: _fn,
+    setFn,
+    spy,
+  }; 
 }
 
 export function prepareTestScheduler (): TestScheduler {
@@ -15,21 +41,26 @@ export function prepareTestScheduler (): TestScheduler {
     try {
       expect(actual).to.eql(expected);
     } catch (error) {
-      throw Error(`
-          E: ${drawMarbleFromDefs(expected)}
-          A: ${drawMarbleFromDefs(actual)}
-          `);
+      const e = Error(`E: ${drawMarbleFromDefs(expected)}
+     A: ${drawMarbleFromDefs(actual)}`);
+      e.stack = '';
+      throw e;
     }
   });
 }
 
+interface MarbleDef {
+  frame: number,
+  notification: { kind: 'N'|'C'|'E', value: unknown, error: Error | undefined }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawMarbleFromDefs (def: any) {
-  console.log(def);
+function drawMarbleFromDefs (def: MarbleDef[]) {
+  logDef(def);
   let expectedMarble = '.';
   let expectedFrame = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  def.forEach((ev: any) => {
+  def.forEach((ev) => {
     if (ev.frame === 0) {
       expectedMarble = formatEventValue(ev);  
     }
@@ -44,13 +75,34 @@ function drawMarbleFromDefs (def: any) {
 }
   
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatEventValue (ev: any): string {
+function formatEventValue (ev: MarbleDef): string {
   if (ev.notification.value !== undefined) {
     if (ev.notification.value === null) return '_';
     if (ev.notification.value instanceof Error) return '€';
-    return ev.notification.value;
+    return ev.notification.value as string;
   }
   if (ev.notification.error !== undefined) return '#';
   if (ev.notification.kind === 'C') return '|';
   return 'What is this is should not happen';
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function logDef (def: MarbleDef[]) {
+  // let s = '';
+  def.forEach(d => {
+    console.log(`frame: ${d.frame} - ${d.notification.kind}: ${d.notification.error !== undefined ? d.notification.error : d.notification.value}`);
+  });
+  console.log('----------------------');
+}
+
+export const ignoreErrorSub = { 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  error() {}, 
+};
+
+export class TestError extends Error {
+  id = Math.random();
+  constructor (message: string) {
+    super(message);
+  }
 }

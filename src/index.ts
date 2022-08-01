@@ -15,7 +15,7 @@ import {
   switchMap,
 } from 'rxjs/operators';
 import { ERROR_STRATEGY } from './error-handling';
-import { handleError, handleLoadFunctionError, registerLoadingEndEvent, registerLoadingStartEvent } from './helpers';
+import { handleAndCodifyTriggerError, handleError, handleLoadFunctionError, registerLoadingEndEvent, registerLoadingStartEvent } from './helpers';
 import { LoadContext, LOAD_STRATEGY } from './loading-handling';
 
 export interface LoadableObservableOptions {
@@ -49,13 +49,14 @@ export class LoadableObservable<Resource, LoadArguments> extends Observable<Reso
 
     const combinePipe = doSwitch ? switchMap : mergeMap;
     this.data$ = trigger$.pipe(
+      handleAndCodifyTriggerError(),
       registerLoadingStartEvent(loadContext),
       tap(() => this._loadingError$.next(null)),
       combinePipe(loadArguments => 
         loadFunction(loadArguments)
-          .pipe(handleLoadFunctionError(errorStrategy, this._loadingError$)),
+          .pipe(handleLoadFunctionError(errorStrategy, this._loadingError$, loadContext)),
       ),
-      handleError(this._loadingError$),
+      handleError(this._loadingError$, loadContext),
       registerLoadingEndEvent(loadContext),
     );
   }
