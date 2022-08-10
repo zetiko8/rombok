@@ -28,16 +28,16 @@ export function handleLoadFunctionError<T>(errorStrategy: ERROR_STRATEGY, errorN
   }));
 }
 
-export function handleError<T>(errorNotificationSubject$: Subject<Error | null>, loadContext: LoadContext): OperatorFunction<T, T> {
+export function handleError<T>(setError: (errorState: Error | null) => void, loadContext: LoadContext): OperatorFunction<T, T> {
   return pipe(
     catchError(error => {
       if (error.isTriggerError) {
         logger.debug('handleError pipe - isTriggerError');
-        errorNotificationSubject$.next(error.originalError);
+        setError(error.originalError);
         return throwError(() => error.originalError);
       } else {
         logger.debug('handleError pipe');
-        errorNotificationSubject$.next(error);
+        setError(error);
         loadContext.registerLoadEnd();
         return throwError(() => error);
       }
@@ -48,6 +48,7 @@ export function handleError<T>(errorNotificationSubject$: Subject<Error | null>,
 export function handleAndCodifyTriggerError<T>(): OperatorFunction<T, T> {
   return pipe(
     catchError(error => {
+      logger.debug('handleAndCodifyTriggerError');
       return throwError(() => new TriggerError(error));
     }),
   );
