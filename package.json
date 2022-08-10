@@ -8,13 +8,11 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "build": "rimraf dist && ttsc --build tsconfig.prod.json",
-    "start": "yarn run start:dev",
     "test": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
     "test:bail": "mocha --config .mocharc.json -b --watch src/**/*.spec.ts",
-    "lint": "eslint src/**/*.ts --fix",
-    "start:dev": "nodemon --config .nodemonrc.json src/index.ts",
-    "start:prod": "node dist/index.js"
+    "example": "npm run build && cd example && snowpack dev",
+    "build": "rimraf lib && tsc",
+    "lint": "eslint"
   },
   "dependencies": {
     "node": "^15.3.0",
@@ -35,6 +33,7 @@
     "rimraf": "^3.0.2",
     "sinon": "^14.0.0",
     "sinon-chai": "^3.7.0",
+    "snowpack": "^3.8.8",
     "ts-node": "^9.0.0",
     "ttypescript": "^1.5.12",
     "typescript": "^4.1.2",
