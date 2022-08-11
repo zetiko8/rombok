@@ -25,17 +25,20 @@ interface LoadableObservableOptionsDefined {
   switch: boolean;
   errorStrategy: ERROR_STRATEGY;
 }
+
 export class LoadableRx<T> {
-  loadFunction: (trigg: unknown) => Observable<T>;
-  options: LoadableObservableOptionsDefined;
+  private loadFunction: (trigg: unknown) => Observable<T>;
+  private options: LoadableObservableOptionsDefined;
+  private _loadingError$ = new ReplaySubject<Error | null>(1);
+  private loadContext: LoadContext;
+  
   isLoading$: Observable<boolean>;
-  _loadingError$ = new ReplaySubject<Error | null>(1);
   loadingError$ = this._loadingError$
     .pipe(
       tap(() => logger.debug('Nexted _loadingError')),
       distinctUntilChanged(),
     );
-  loadContext: LoadContext;
+
   constructor (
     loadFunction: (trigg: unknown) => Observable<T>,
     options?: LoadableObservableOptions,
@@ -49,7 +52,7 @@ export class LoadableRx<T> {
     this.options = opts;
     
     // setup initial error state
-    this.setError(null);
+    this._setError(null);
     
     // setup loading state
     const loadStrategy = opts.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default;
@@ -58,25 +61,51 @@ export class LoadableRx<T> {
     this.loadContext = loadContext;
   }
 
-  setError (state: null | Error): void {
+  private _getSettings (): LoadableObservableOptionsDefined  {
+    return JSON.parse(JSON.stringify(this.options));
+  }
+
+  private _setError (state: null | Error): void {
     logger.debug('setError', state);
     this._loadingError$.next(state);
+  }
+
+  private _registerLoadingStart (): void {
+    this.loadContext.registerLoading();
+  }
+  
+  private _registerLoadingEnd (): void {
+    this.loadContext.registerLoadEnd();
+  }
+
+  private _getLoadFunction (): (trigg: unknown) => Observable<T> {
+    return this.loadFunction;
   }
 }
 
 export function loadableRx<T>(
-  loadableRxDefinition: LoadableRx<T>,
+  lrx: LoadableRx<T>,
 ): OperatorFunction<unknown, T> {
-  const combinePipe = loadableRxDefinition.options.switch ? switchMap : mergeMap;
+  // @ts-expect-error - method is private for the end user not for _internal lib. TODO - try to solve in another way
+  const setError = lrx._setError.bind(lrx);
+  // @ts-expect-error - method is private for the end user not for _internal lib. TODO - try to solve in another way
+  const registerLoadingStart = lrx._registerLoadingStart.bind(lrx);
+  // @ts-expect-error - method is private for the end user not for _internal lib. TODO - try to solve in another way
+  const registerLoadingEnd = lrx._registerLoadingEnd.bind(lrx);
+  // @ts-expect-error - method is private for the end user not for _internal lib. TODO - try to solve in another way
+  const loadFn = lrx._getLoadFunction();
+  // @ts-expect-error - method is private for the end user not for _internal lib. TODO - try to solve in another way
+  const options = lrx._getSettings();
+  const combinePipe = options.switch ? switchMap : mergeMap;
   return pipe(
     handleAndCodifyTriggerError(),
-    registerLoadingStartEvent(loadableRxDefinition.loadContext),
-    tap(() => loadableRxDefinition._loadingError$.next(null)),
+    registerLoadingStartEvent(registerLoadingStart),
+    tap(() => setError(null)),
     combinePipe(loadArguments => 
-      loadableRxDefinition.loadFunction(loadArguments)
-        .pipe(handleLoadFunctionError(loadableRxDefinition.options.errorStrategy, loadableRxDefinition._loadingError$, loadableRxDefinition.loadContext)),
+      loadFn(loadArguments)
+        .pipe(handleLoadFunctionError(options.errorStrategy, setError, registerLoadingEnd)),
     ),
-    registerLoadingEndEvent(loadableRxDefinition.loadContext),
-    handleError(loadableRxDefinition.setError.bind(loadableRxDefinition), loadableRxDefinition.loadContext),
+    registerLoadingEndEvent(registerLoadingEnd),
+    handleError(setError, registerLoadingEnd),
   );
 }
