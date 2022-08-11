@@ -1,8 +1,10 @@
 import { TestScheduler } from 'rxjs/testing';
-import { Observable } from 'rxjs';
+import { from, Observable, of } from 'rxjs';
+import { delay, filter, map, concatMap } from 'rxjs';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
+import { immediate$ } from './utils';
 chai.use(sinonChai);
 const expect = chai.expect;
 
@@ -105,4 +107,23 @@ export class TestError extends Error {
   constructor (message: string) {
     super(message);
   }
+}
+
+export function after (time: number, fn: () => void): void {
+  immediate$().pipe(delay(time)).subscribe(fn);
+}
+
+export function myScheduler<T>(pattern: string, resultSet: { [key: string]: T }, interval: number, debug = ''): Observable<T> {
+  return from(pattern).pipe(
+    concatMap(item => of(item).pipe ( delay( interval ) )),
+    filter(char => {
+      const on = char !== '-';
+      if ((debug)) {
+        if (on) console.log(`(${debug}) ${char} `);
+        else console.log(`(${debug}) -`);
+      }
+      return on;
+    }),
+    map(char => resultSet[char]),
+  );
 }

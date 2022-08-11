@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import { loadableRx, LoadableRx } from '.';
 import { ERROR_STRATEGY } from './error-handling';
 import { mergeMap, switchMap, shareReplay } from 'rxjs/operators';
@@ -6,7 +7,7 @@ import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
 import { of, EMPTY } from 'rxjs';
-import { getSpyWrapper, ignoreErrorSub, prepareTestScheduler, TestError, TLoadArgs } from './test.helpers';
+import { after, getSpyWrapper, ignoreErrorSub, myScheduler, prepareTestScheduler, TestError, TLoadArgs } from './test.helpers';
 import { logger } from './debug-helpers';
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -549,6 +550,77 @@ describe('LoadableResource', () => {
         expectObservable(lrx.isLoading$).toBe('t-----f-t-f', { t: true, f: false  });
       });
     });
+  });
+
+  describe('unsubscribe', () => {
+    const delayT = 20;
+    const afterTime = delayT * 15;
+    // watch out the tests tak3 f-n 310ms, also it is important to correctly
+    // set the mocha timeout in .mocharc.json
+    it('no unsubscribe - once', done => {
+      const trigger$ = myScheduler('--a', { a: tLoadArgs }, delayT);
+      const load$ = myScheduler('--a', { a: tLoadArgs }, delayT);
+      const spy = sbx.spy(() => {});
+
+      trigger$
+        .pipe(loadableRx(new LoadableRx(() => load$)))
+        .subscribe({ next: spy });
+
+      after(afterTime, () => {
+        expect(spy).to.have.been.calledOnce;
+        done();
+      });
+      
+    });
+    it('unsubscribe - once', done => {
+      const trigger$ = myScheduler('--a', { a: tLoadArgs }, delayT);
+      const load$ = myScheduler('--a', { a: tLoadArgs }, delayT);
+      const spy = sbx.spy(() => {});
+
+      const sub = trigger$
+        .pipe(loadableRx(new LoadableRx(() => load$)))
+        .subscribe({ next: spy });
+      sub.unsubscribe();
+
+      after(afterTime, () => {
+        expect(spy).to.not.have.been.called;
+        done();
+      });
+    });
+    it('no unsubscribe - twice', done => {
+      const trigger$ = myScheduler('--a--a', { a: tLoadArgs }, delayT);
+      const load$ = myScheduler('--a', { a: tResource }, delayT);
+      const spy = sbx.spy(() => {});
+
+      trigger$
+        .pipe(
+          loadableRx(new LoadableRx(() => load$)),
+        )
+        .subscribe({ next: spy });
+
+      after(afterTime, () => {
+        expect(spy).to.have.been.calledTwice;
+        done();
+      });
+      
+    });
+    it('unsubscribe - twice', done => {
+      const trigger$ = myScheduler('--a--a', { a: tLoadArgs }, delayT);
+      const load$ = myScheduler('--a', { a: tResource }, delayT);
+      const spy = sbx.spy(() => {});
+      
+      const sub = trigger$
+        .pipe(loadableRx(new LoadableRx(() => load$)))
+        .subscribe(spy);
+      myScheduler('-----a', {}, delayT)
+        .subscribe(() => sub.unsubscribe());
+
+      after(afterTime, () => {
+        expect(spy).to.have.been.calledOnce;
+        done();
+      });
+    });
+    it('unsubscribe + shareReplay');
   });
 
 });
