@@ -557,7 +557,7 @@ describe('LoadableResource', () => {
     const afterTime = delayT * 15;
     // watch out the tests tak3 f-n 310ms, also it is important to correctly
     // set the mocha timeout in .mocharc.json
-    it('no unsubscribe - once', done => {
+    it('(slowtest) no unsubscribe - once', done => {
       const trigger$ = myScheduler('--a', { a: tLoadArgs }, delayT);
       const load$ = myScheduler('--a', { a: tLoadArgs }, delayT);
       const spy = sbx.spy(() => {});
@@ -572,7 +572,7 @@ describe('LoadableResource', () => {
       });
       
     });
-    it('unsubscribe - once', done => {
+    it('(slowtest) unsubscribe - once', done => {
       const trigger$ = myScheduler('--a', { a: tLoadArgs }, delayT);
       const load$ = myScheduler('--a', { a: tLoadArgs }, delayT);
       const spy = sbx.spy(() => {});
@@ -587,7 +587,7 @@ describe('LoadableResource', () => {
         done();
       });
     });
-    it('no unsubscribe - twice', done => {
+    it('(slowtest) no unsubscribe - twice', done => {
       const trigger$ = myScheduler('--a--a', { a: tLoadArgs }, delayT);
       const load$ = myScheduler('--a', { a: tResource }, delayT);
       const spy = sbx.spy(() => {});
@@ -604,7 +604,7 @@ describe('LoadableResource', () => {
       });
       
     });
-    it('unsubscribe - twice', done => {
+    it('(slowtest) unsubscribe - twice', done => {
       const trigger$ = myScheduler('--a--a', { a: tLoadArgs }, delayT);
       const load$ = myScheduler('--a', { a: tResource }, delayT);
       const spy = sbx.spy(() => {});

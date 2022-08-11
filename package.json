@@ -10,6 +10,7 @@
   "scripts": {
     "test": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
     "test:bail": "mocha --config .mocharc.json -b --watch src/**/*.spec.ts",
+    "test:fast": "mocha --config .mocharc.json -b --watch --grep \"^(?!.*slowtest)\" src/**/*.spec.ts",
     "example": "npm run build && cd example && snowpack dev",
     "build": "rimraf lib && tsc",
     "lint": "eslint"
