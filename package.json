@@ -9,7 +9,8 @@
   "private": false,
   "keywords": ["rxjs", "rombok", "LoadableRx"],
   "scripts": {
-    "test": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
+    "test": "mocha --config .mocharc.json src/**/*.spec.ts",
+    "test:watch": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
     "test:bail": "mocha --config .mocharc.json -b --watch src/**/*.spec.ts",
     "test:fast": "mocha --config .mocharc.json -b --watch --grep \"^(?!.*slowtest)\" src/**/*.spec.ts",
     "example": "npm run build && rimraf example/lib && copyfiles lib/* example && cd example && snowpack dev",
