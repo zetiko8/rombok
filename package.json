@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "description": "RxJs utils",
   "main": "lib/index.js",
-  "repository": "https://github.com/christo8989/node-typescript-mocha-eslint.git",
+  "types": "lib/index.d.ts",
+  "repository": "https://github.com/zetiko8/rombok",
   "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
-  "license": "MIT",
   "private": false,
+  "keywords": ["rxjs", "rombok", "LoadableRx"],
   "scripts": {
     "test": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
     "test:bail": "mocha --config .mocharc.json -b --watch src/**/*.spec.ts",
