@@ -1,22 +1,23 @@
 {
-  "name": "tombok",
-  "version": "1.0.0",
-  "description": "Helpful data structures",
-  "main": "dist/index.js",
+  "name": "rombok",
+  "version": "0.1.0",
+  "description": "RxJs utils",
+  "main": "lib/index.js",
   "repository": "https://github.com/christo8989/node-typescript-mocha-eslint.git",
-  "author": "Christopher Jeffery <christo8989@gmail.com>",
+  "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
   "license": "MIT",
   "private": false,
   "scripts": {
     "test": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
     "test:bail": "mocha --config .mocharc.json -b --watch src/**/*.spec.ts",
     "test:fast": "mocha --config .mocharc.json -b --watch --grep \"^(?!.*slowtest)\" src/**/*.spec.ts",
-    "example": "npm run build && cd example && snowpack dev",
+    "example": "npm run build && rimraf example/lib && copyfiles lib/* example && cd example && snowpack dev",
     "build": "rimraf lib && tsc",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare" : "npm run build",
+    "prepublishOnly" : "npm run test"
   },
   "dependencies": {
-    "node": "^15.3.0",
     "rxjs": "^7.5.6"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@typescript-eslint/eslint-plugin": "^4.8.2",
     "@typescript-eslint/parser": "^4.8.2",
     "chai": "^4.2.0",
+    "copyfiles": "^2.4.1",
     "eslint": "^7.14.0",
     "mocha": "^8.2.1",
     "nodemon": "^2.0.6",
@@ -39,5 +41,6 @@
     "ttypescript": "^1.5.12",
     "typescript": "^4.1.2",
     "typescript-transform-paths": "^2.1.0"
-  }
+  },
+  "files": ["lib/**/*"]
 }

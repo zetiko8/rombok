@@ -1,28 +1,12 @@
-# node-typescript-mocha
-A guide to help you create a development environment with Node, TypeScript, Mocha, and ESLint.
-
-## Install
-```
-yarn install
-```
-
-## Develop
-```
-yarn start
-```
-
-## Test
-```
-yarn test
-yarn test --watch=false
-```
+# rombok
+RxJs utils
 
 ## Build
-```
-yarn build
-```
 
-## Production
-```
-yarn start:prod
-```
+`npm run build`
+
+Bundle in `/lib`
+
+## Test
+
+`npm run test`
