@@ -5,6 +5,7 @@ import {
   BehaviorSubject,
   throwError,
   Subject,
+  of,
 } from 'rxjs';
 import {
   catchError,
@@ -13,15 +14,12 @@ import {
   tap,
   filter,
   take,
+  distinctUntilChanged,
+  startWith,
 } from 'rxjs/operators';
+import { LOAD_STRATEGY, LoadContext, LoadContext1, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { log } from '~/utils';
-
-export enum MULTIPLE_EXECUTIONS_STRATEGY {
-  CONCURRENT,
-  ONE_BY_ONE,
-  SWITCH_MAP,
-}
 
 export interface IProcess<T> {
     error$: Observable<Error | null>;
@@ -30,14 +28,17 @@ export interface IProcess<T> {
   }
 
 export class Process<T> implements IProcess<T> {
+    private _loadContext: LoadContext1;
     private _inProgress$
      = new BehaviorSubject<boolean>(false);
     private _inProgressIndicator$
      = new BehaviorSubject<boolean>(false);
-    public inProgress$ = this._inProgressIndicator$
-      .pipe(
-        observeOn(asyncScheduler),
-      );
+    // public inProgress$ = this._inProgressIndicator$
+    //   .pipe(
+    //     observeOn(asyncScheduler),
+    //     distinctUntilChanged(),
+    //   );
+    public inProgress$: Observable<boolean>;
     private _error$ = new ReplaySubject<null | Error>(1);
     public error$ = this._error$
       .pipe(observeOn(asyncScheduler));
@@ -56,6 +57,15 @@ export class Process<T> implements IProcess<T> {
         MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE,
     }) {
       this._options = options;
+
+      this._loadContext
+        = new LoadContext1(this._options.multipleExecutionsStrategy);
+      this.inProgress$ = this._loadContext.isLoading$
+        .pipe(
+          startWith(false),
+          observeOn(asyncScheduler),
+          distinctUntilChanged(),
+        );
     }
 
     execute<T> (
@@ -78,6 +88,7 @@ export class Process<T> implements IProcess<T> {
             observeOn(asyncScheduler),
             tap(() => {
               this._error$.next(null);
+              this._loadContext.registerLoading();
               this._inProgressIndicator$.next(true);
             }),
             switchMap(
@@ -87,6 +98,7 @@ export class Process<T> implements IProcess<T> {
             catchError(error => {
               this._inProgress$.next(false);
               this._inProgressIndicator$.next(false);
+              this._loadContext.registerLoadEnd();
               this._error$.next(error);
               return throwError(error);
             }),
@@ -97,6 +109,46 @@ export class Process<T> implements IProcess<T> {
               this._success$.next(result);
               this._inProgress$.next(false);
               this._inProgressIndicator$.next(false);
+              this._loadContext.registerLoadEnd();
+            }),
+            take(1),
+          );
+      }
+      else if (
+        this._options.multipleExecutionsStrategy
+        ===
+        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
+      ) {
+        return of('immediate')
+          .pipe(
+            tap(() => {
+              this._inProgress$.next(true);
+            }),
+            observeOn(asyncScheduler),
+            tap(() => {
+              this._error$.next(null);
+              this._loadContext.registerLoading();
+              this._inProgressIndicator$.next(true);
+            }),
+            switchMap(
+              () => processFunction()
+                .pipe(take(1)),
+            ),
+            catchError(error => {
+              this._inProgress$.next(false);
+              this._inProgressIndicator$.next(false);
+              this._loadContext.registerLoadEnd();
+              this._error$.next(error);
+              return throwError(error);
+            }),
+            tap((result) => {
+              this._error$.next(null);
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore - TODO help me
+              this._success$.next(result);
+              this._inProgress$.next(false);
+              this._inProgressIndicator$.next(false);
+              this._loadContext.registerLoadEnd();
             }),
             take(1),
           );
