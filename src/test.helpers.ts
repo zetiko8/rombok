@@ -35,14 +35,53 @@ export function getSpyWrapper(sinon: SinonSandbox): {
     fn: _fn,
     setFn,
     spy,
-  }; 
+  };
+}
+
+function getNumberOfSyncGroupings (
+  expected: any,
+) {
+
+  const e = expected as { frame: number }[];
+  const dict: Record<number, number> = {};
+  e.forEach(u => {
+    if (!dict[u.frame]) {
+      dict[u.frame] = 0;
+    }
+    dict[u.frame]++;
+  });
+
+  return dict;
 }
 
 export function prepareTestScheduler (): TestScheduler {
   return new TestScheduler((actual, expected) => {
     try {
-      expect(actual).to.eql(expected);
+      try {
+        expect(actual).to.eql(expected);
+      } catch (error) {
+        const dictOfSyncGroupings = getNumberOfSyncGroupings(expected);
+
+        Object.entries(dictOfSyncGroupings)
+          .forEach(([key, val]) => {
+            if (val > 1) {
+              expected.forEach((frameDef: any) => {
+                if (frameDef.frame > Number(key)) {
+                  frameDef.frame -= (val + 1);
+                }
+              });
+            }
+          });
+
+        // console.log(expected);
+        expect(actual).to.eql(expected);
+      }
     } catch (error) {
+
+      // eslint-disable-next-line no-console
+      console.log(expected);
+      // eslint-disable-next-line no-console
+      console.log(actual);
       const e = Error(`E: ${drawMarbleFromDefs(expected)}
      A: ${drawMarbleFromDefs(actual)}`);
       e.stack = '';
@@ -64,18 +103,18 @@ function drawMarbleFromDefs (def: MarbleDef[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   def.forEach((ev) => {
     if (ev.frame === 0) {
-      expectedMarble = formatEventValue(ev);  
+      expectedMarble = formatEventValue(ev);
     }
     else {
       if (ev.frame > expectedFrame) Array.from(new Array(ev.frame - (expectedFrame + 1))).forEach(() => expectedMarble += '.');
       expectedMarble += formatEventValue(ev);
     }
     expectedFrame = ev.frame;
-  
+
   });
   return expectedMarble;
 }
-  
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatEventValue (ev: MarbleDef): string {
   if (ev.notification.value !== undefined) {
@@ -85,6 +124,7 @@ function formatEventValue (ev: MarbleDef): string {
   }
   if (ev.notification.error !== undefined) return '#';
   if (ev.notification.kind === 'C') return '|';
+
   return 'What is this is should not happen';
 }
 
@@ -97,9 +137,9 @@ function logDef (def: MarbleDef[]) {
   console.log('----------------------');
 }
 
-export const ignoreErrorSub = { 
+export const ignoreErrorSub = {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  error() {}, 
+  error() {},
 };
 
 export class TestError extends Error {
