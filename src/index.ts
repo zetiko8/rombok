@@ -15,6 +15,7 @@ import { logger } from './debug-helpers';
 import { ERROR_STRATEGY } from './error-handling';
 import { handleAndCodifyTriggerError, handleError, handleLoadFunctionError, registerLoadingEndEvent, registerLoadingStartEvent } from './helpers';
 import { LoadContext, LOAD_STRATEGY } from './loading-handling';
+export { Process } from './procces';
 
 export interface LoadableObservableOptions {
   switch?: boolean;
@@ -109,3 +110,4 @@ export function loadableRx<T>(
     handleError(setError, registerLoadingEnd),
   );
 }
+
