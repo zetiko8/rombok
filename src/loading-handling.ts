@@ -172,6 +172,9 @@ export class LoadContext1 {
     if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE)
       this._implementation
        = new OnlyOneLoadAtTimeLoadingContext1();
+    if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP)
+      this._implementation
+       = new OnlyOneLoadAtTimeLoadingContext1();
     else this._implementation
      = new MultipleLoadsAtTimeLoadingContext1();
     this.registerLoadEnd = () => {
