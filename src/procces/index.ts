@@ -31,13 +31,6 @@ export class Process<T> implements IProcess<T> {
     private _loadContext: LoadContext1;
     private _inProgress$
      = new BehaviorSubject<boolean>(false);
-    private _inProgressIndicator$
-     = new BehaviorSubject<boolean>(false);
-    // public inProgress$ = this._inProgressIndicator$
-    //   .pipe(
-    //     observeOn(asyncScheduler),
-    //     distinctUntilChanged(),
-    //   );
     public inProgress$: Observable<boolean>;
     private _error$ = new ReplaySubject<null | Error>(1);
     public error$ = this._error$
@@ -89,7 +82,6 @@ export class Process<T> implements IProcess<T> {
             tap(() => {
               this._error$.next(null);
               this._loadContext.registerLoading();
-              this._inProgressIndicator$.next(true);
             }),
             switchMap(
               () => processFunction()
@@ -97,7 +89,6 @@ export class Process<T> implements IProcess<T> {
             ),
             catchError(error => {
               this._inProgress$.next(false);
-              this._inProgressIndicator$.next(false);
               this._loadContext.registerLoadEnd();
               this._error$.next(error);
               return throwError(error);
@@ -108,7 +99,6 @@ export class Process<T> implements IProcess<T> {
               // @ts-ignore - TODO help me
               this._success$.next(result);
               this._inProgress$.next(false);
-              this._inProgressIndicator$.next(false);
               this._loadContext.registerLoadEnd();
             }),
             take(1),
@@ -128,7 +118,6 @@ export class Process<T> implements IProcess<T> {
             tap(() => {
               this._error$.next(null);
               this._loadContext.registerLoading();
-              this._inProgressIndicator$.next(true);
             }),
             switchMap(
               () => processFunction()
@@ -136,7 +125,6 @@ export class Process<T> implements IProcess<T> {
             ),
             catchError(error => {
               this._inProgress$.next(false);
-              this._inProgressIndicator$.next(false);
               this._loadContext.registerLoadEnd();
               this._error$.next(error);
               return throwError(error);
@@ -147,7 +135,6 @@ export class Process<T> implements IProcess<T> {
               // @ts-ignore - TODO help me
               this._success$.next(result);
               this._inProgress$.next(false);
-              this._inProgressIndicator$.next(false);
               this._loadContext.registerLoadEnd();
             }),
             take(1),
