@@ -1,6 +1,6 @@
 {
   "ts-node": {
-    "compiler": "ttypescript"
+    "compiler": "typescript"
   },
   "exclude": ["node_modules", "**/*.spec.ts"],
   "compilerOptions": {
