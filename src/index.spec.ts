@@ -36,19 +36,19 @@ describe('LoadableResource', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const trigger$ = cold('--a', { a: tLoadArgs });
         const load$ = cold('--a', { a: tResource });
-  
+
         const obs$ = trigger$
           .pipe(loadableRx(new LoadableRx(() => load$)));
         expectObservable(obs$).toBe('----a', { a: tResource });
       });
     });
-  
+
     it('should load the data, when a trigger happens twice', () => {
       scheduler.run(({ cold, expectObservable }) => {
-  
+
         const trigger$ = cold('--a--a', { a: tLoadArgs });
         const load$ = cold('--a', { a: tResource });
-  
+
         const obs$ = trigger$
           .pipe(loadableRx(new LoadableRx(() => load$)));
         expectObservable(obs$).toBe('----a--a', { a: tResource });
@@ -57,10 +57,10 @@ describe('LoadableResource', () => {
 
     it('the load pipe should get the correct parameters', () => {
       scheduler.run(({ cold, expectObservable }) => {
-  
+
         const trigger$ = cold('--a', { a: tLoadArgs });
         const load$ = cold('--a', { a: tResource });
-  
+
         const obs$ = trigger$
           .pipe(loadableRx(new LoadableRx(args => {
             expect((args as any).textContains).to.equal('word');
@@ -79,13 +79,13 @@ describe('LoadableResource', () => {
         it('normal switchMap', () => {
           scheduler.run(({ cold, expectObservable }) => {
             const load$ = cold('a', { a: tResource });
-      
+
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
                 switchMap(() => cold(switchPattern, { a: tLoadArgs })),
                 mergeMap(() => load$),
               );
-            
+
             expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
           });
         });
@@ -93,18 +93,18 @@ describe('LoadableResource', () => {
         it('switchMap integration', () => {
           scheduler.run(({ cold, expectObservable }) => {
             const load$ = cold('a', { a: tResource });
-      
+
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(
                 switchMap(() => cold(switchPattern, { a: tLoadArgs })),
               );
-            
+
             const obs$ = trigger$
-              .pipe(loadableRx(new LoadableRx(() => load$)));     
+              .pipe(loadableRx(new LoadableRx(() => load$)));
             expectObservable(obs$).toBe(expectedPattern, { a: tResource });
           });
         });
-      
+
       });
 
       describe('switchMap on loadFn', () => {
@@ -115,22 +115,22 @@ describe('LoadableResource', () => {
         it('normal switchMap', () => {
           scheduler.run(({ cold, expectObservable }) => {
             const load$ = cold(switchPattern, { a: tResource });
-      
+
             const trigger$ = cold(triggerPattern, { a: tLoadArgs })
               .pipe(switchMap(() => load$));
-            
+
             expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
           });
         });
 
 
         it('switchMap integration', () => {
-          scheduler.run(({ cold, expectObservable }) => {      
+          scheduler.run(({ cold, expectObservable }) => {
             const trigger$ = cold(triggerPattern, { a: tLoadArgs });
             const load$ = cold(switchPattern, { a: tResource });
-      
+
             const obs$ = trigger$
-              .pipe(loadableRx(new LoadableRx(() => load$, { switch: true })));    
+              .pipe(loadableRx(new LoadableRx(() => load$, { switch: true })));
             expectObservable(obs$).toBe(expectedPattern, { a: tResource });
           });
         });
@@ -141,62 +141,62 @@ describe('LoadableResource', () => {
           const triggerPattern = '--a--a';
           const noSwitchPattern = '----a';
           const expectedPattern = '------a--a';
-  
+
           it('normal switchMap', () => {
             scheduler.run(({ cold, expectObservable }) => {
               const load$ = cold('a', { a: tResource });
-        
+
               const trigger$ = cold(triggerPattern, { a: tLoadArgs })
                 .pipe(
                   mergeMap(() => cold(noSwitchPattern, { a: tLoadArgs })),
                   mergeMap(() => load$),
                 );
-              
+
               expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
             });
           });
-  
+
           it('no switchMap integration', () => {
             scheduler.run(({ cold, expectObservable }) => {
               const load$ = cold('a', { a: tResource });
-        
+
               const trigger$ = cold(triggerPattern, { a: tLoadArgs })
                 .pipe(
                   mergeMap(() => cold(noSwitchPattern, { a: tLoadArgs })),
                 );
-              
+
               const obs$ = trigger$
-                .pipe(loadableRx(new LoadableRx(() => load$)));      
+                .pipe(loadableRx(new LoadableRx(() => load$)));
               expectObservable(obs$).toBe(expectedPattern, { a: tResource });
             });
           });
-        
+
         });
-  
+
         describe('no switchMap on loadFn', () => {
           const triggerPattern = '--a--a';
           const noSwitchPattern = '----a';
           const expectedPattern = '------a--a';
-  
+
           it('normal no switchMap', () => {
             scheduler.run(({ cold, expectObservable }) => {
               const load$ = cold(noSwitchPattern, { a: tResource });
-        
+
               const trigger$ = cold(triggerPattern, { a: tLoadArgs })
                 .pipe(mergeMap(() => load$));
-              
+
               expectObservable(trigger$).toBe(expectedPattern, { a: tResource });
             });
           });
-  
-  
+
+
           it('no switchMap integration', () => {
-            scheduler.run(({ cold, expectObservable }) => {      
+            scheduler.run(({ cold, expectObservable }) => {
               const trigger$ = cold(triggerPattern, { a: tLoadArgs });
               const load$ = cold(noSwitchPattern, { a: tResource });
-        
+
               const obs$ = trigger$
-                .pipe(loadableRx(new LoadableRx(() => load$))); 
+                .pipe(loadableRx(new LoadableRx(() => load$)));
               expectObservable(obs$).toBe(expectedPattern, { a: tResource });
             });
           });
@@ -213,11 +213,11 @@ describe('LoadableResource', () => {
             const trigger$ = cold('--a', { a: tLoadArgs });
             const load$ = cold('--a', { a: tResource });
             spyWrapper.setFn(() => load$);
-            
+
             const obs$ = trigger$.pipe(mergeMap(spy));
             expectObservable(obs$).toBe('----a', { a: tResource });
             expectObservable(obs$).toBe('----a', { a: tResource });
-  
+
           });
           expect(spy).to.have.been.calledTwice;
         });
@@ -228,11 +228,11 @@ describe('LoadableResource', () => {
             const trigger$ = cold('--a', { a: tLoadArgs });
             const load$ = cold('--a', { a: tResource });
             spyWrapper.setFn(() => load$);
-            
+
             const obs$ = trigger$.pipe(mergeMap(spy), shareReplay(1));
             expectObservable(obs$).toBe('----a', { a: tResource });
             expectObservable(obs$).toBe('----a', { a: tResource });
-  
+
           });
           expect(spy).to.have.been.calledOnce;
         });
@@ -245,9 +245,9 @@ describe('LoadableResource', () => {
             const trigger$ = cold('--a', { a: tLoadArgs });
             const load$ = cold('--a', { a: tResource });
             spyWrapper.setFn(() => load$);
-      
+
             const obs$ = trigger$
-              .pipe(loadableRx(new LoadableRx(spy))); 
+              .pipe(loadableRx(new LoadableRx(spy)));
             expectObservable(obs$).toBe('----a', { a: tResource });
             expectObservable(obs$).toBe('----a', { a: tResource });
           });
@@ -260,7 +260,7 @@ describe('LoadableResource', () => {
             const trigger$ = cold('--a', { a: tLoadArgs });
             const load$ = cold('--a', { a: tResource });
             spyWrapper.setFn(() => load$);
-      
+
             const obs$ = trigger$
               .pipe(
                 loadableRx(new LoadableRx(spy)),
@@ -292,7 +292,7 @@ describe('LoadableResource', () => {
     it('should display a loader complicated case', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const load$ = cold('--a', { a: tResource });
-        
+
         const trigger$ = cold('a-a-a---a', { a: tLoadArgs });
         const lrx = new LoadableRx(() => load$);
 
@@ -310,7 +310,7 @@ describe('LoadableResource', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const trigger$ = cold(triggerPattern, { a: tLoadArgs });
         const load$ = cold(switchPattern, { a: tResource });
-  
+
         const lrx = new LoadableRx(() => load$, { switch: true });
 
         const obs$ = trigger$
@@ -326,10 +326,10 @@ describe('LoadableResource', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const error = new TestError('Test error');
         const load$ = cold('a', { a: tResource }, error);
-  
+
         const trigger$ = cold(triggerPattern, { a: tLoadArgs })
           .pipe(switchMap(() => cold(switchPattern, { a: tLoadArgs })));
-        
+
         const lrx = new LoadableRx(() => load$);
 
         const obs$ = trigger$
@@ -348,7 +348,7 @@ describe('LoadableResource', () => {
           const error = new TestError('Test error');
           const trigger$ = cold('--#', { a: tLoadArgs }, error);
           const load$ = cold('--a', { a: tResource });
-      
+
           const lrx = new LoadableRx(() => load$);
 
           const obs$ = trigger$
@@ -362,7 +362,7 @@ describe('LoadableResource', () => {
           const error = new TestError('Test error');
           const trigger$ = cold('--#--a', { a: tLoadArgs }, error);
           const load$ = cold('--a', { a: tResource });
-      
+
           const lrx = new LoadableRx(() => load$);
 
           const obs$ = trigger$
@@ -379,7 +379,7 @@ describe('LoadableResource', () => {
           const trigger$ = cold('--e--a', { a: tLoadArgs, e: tLoadArgsThatThrow }, error)
             .pipe(mergeMap(loadArgs => validateTrigger(loadArgs)));
           const load$ = cold('--a', { a: tResource });
-      
+
           const lrx = new LoadableRx(() => load$);
 
           const obs$ = trigger$
@@ -396,11 +396,11 @@ describe('LoadableResource', () => {
             const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
-            
+
             const lrx = new LoadableRx(() => load$);
 
             const obs$ = trigger$
-              .pipe(loadableRx(lrx));  
+              .pipe(loadableRx(lrx));
             expectObservable(obs$).toBe('----#', { a: tResource }, error);
           });
         });
@@ -409,11 +409,11 @@ describe('LoadableResource', () => {
             const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
-            
+
             const lrx = new LoadableRx(() => load$);
 
             const obs$ = trigger$
-              .pipe(loadableRx(lrx));  
+              .pipe(loadableRx(lrx));
             obs$.subscribe(ignoreErrorSub);
             expectObservable(lrx.loadingError$).toBe('n---e', { e: error, n: null });
           });
@@ -425,11 +425,11 @@ describe('LoadableResource', () => {
             const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
-            
+
             const lrx = new LoadableRx(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
 
             const obs$ = trigger$
-              .pipe(loadableRx(lrx));  
+              .pipe(loadableRx(lrx));
             expectObservable(obs$).toBe('-----', { a: tResource }, error);
           });
         });
@@ -438,11 +438,11 @@ describe('LoadableResource', () => {
             const error = new TestError('Test error');
             const trigger$ = cold('--a--a', { a: tLoadArgs });
             const load$ = cold('--#', { a: tResource }, error);
-            
+
             const lrx = new LoadableRx(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
 
             const obs$ = trigger$
-              .pipe(loadableRx(lrx));  
+              .pipe(loadableRx(lrx));
             obs$.subscribe();
             expectObservable(lrx.loadingError$).toBe('n---en-e', { e: error, n: null });
           });
@@ -457,7 +457,7 @@ describe('LoadableResource', () => {
         const error = new TestError('Test error');
         const trigger$ = cold('--#', { a: tLoadArgs }, error);
         const load$ = cold('--a', { a: tResource });
-    
+
         const lrx = new LoadableRx(() => load$);
 
         const obs$ = trigger$
@@ -472,7 +472,7 @@ describe('LoadableResource', () => {
         const error = new TestError('Test error');
         const trigger$ = cold('--a--a', { a: tLoadArgs });
         const load$ = cold('--#', { a: tResource }, error);
-        
+
         const lrx = new LoadableRx(() => load$);
 
         const obs$ = trigger$
@@ -486,7 +486,7 @@ describe('LoadableResource', () => {
         const error = new TestError('Test error');
         const trigger$ = cold('--a--a', { a: tLoadArgs });
         const load$ = cold('--#', { a: tResource }, error);
-        
+
         const lrx = new LoadableRx(() => load$, { errorStrategy: ERROR_STRATEGY.non_terminating });
 
         const obs$ = trigger$
@@ -505,7 +505,7 @@ describe('LoadableResource', () => {
         const error = new TestError('Test error');
         const trigger$ = cold(triggerPattern, { a: tLoadArgs });
         const load$ = cold(switchPattern, { a: tResource }, error);
-  
+
         const lrx = new LoadableRx(() => load$, { switch: true });
 
         const obs$ = trigger$
@@ -521,10 +521,10 @@ describe('LoadableResource', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const error = new TestError('Test error');
         const load$ = cold('#', { a: tResource }, error);
-  
+
         const trigger$ = cold(triggerPattern, { a: tLoadArgs })
           .pipe(switchMap(() => cold(switchPattern, { a: tLoadArgs })));
-        
+
         const lrx = new LoadableRx(() => load$);
 
         const obs$ = trigger$
@@ -539,7 +539,7 @@ describe('LoadableResource', () => {
     it('should give the correct loading indicators, despite shareReplay being used', () => {
       scheduler.run(({ cold, expectObservable }) => {
         const load$ = cold('--a', { a: tResource });
-        
+
         const trigger$ = cold('a-a-a---a', { a: tLoadArgs });
         const lrx = new LoadableRx(() => load$);
 
@@ -570,7 +570,7 @@ describe('LoadableResource', () => {
         expect(spy).to.have.been.calledOnce;
         done();
       });
-      
+
     });
     it('(slowtest) unsubscribe - once', done => {
       const trigger$ = myScheduler('--a', { a: tLoadArgs }, delayT);
@@ -602,13 +602,13 @@ describe('LoadableResource', () => {
         expect(spy).to.have.been.calledTwice;
         done();
       });
-      
+
     });
     it('(slowtest) unsubscribe - twice', done => {
       const trigger$ = myScheduler('--a--a', { a: tLoadArgs }, delayT);
       const load$ = myScheduler('--a', { a: tResource }, delayT);
       const spy = sbx.spy(() => {});
-      
+
       const sub = trigger$
         .pipe(loadableRx(new LoadableRx(() => load$)))
         .subscribe(spy);

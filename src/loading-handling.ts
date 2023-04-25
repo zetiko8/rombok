@@ -81,16 +81,21 @@ export class LoadContext {
 
   constructor(loadStrategy = LOAD_STRATEGY.default) {
     if (loadStrategy === LOAD_STRATEGY.only_one_load_at_a_time)
-      this._implementation = new OnlyOneLoadAtTimeLoadingContext();
-    else this._implementation = new MultipleLoadsAtTimeLoadingContext();
+      this._implementation
+       = new OnlyOneLoadAtTimeLoadingContext();
+    else this._implementation
+     = new MultipleLoadsAtTimeLoadingContext();
     this.registerLoadEnd = () => {
       logger.debug('Abstract load strategy: load end');
-      return this._implementation.registerLoadEnd.bind(this._implementation)();
+      return this._implementation
+        .registerLoadEnd.bind(this._implementation)();
     };
     this.registerLoading = () => {
       logger.debug('Abstract load strategy: load start');
-      return this._implementation.registerLoading.bind(this._implementation)();
+      return this._implementation
+        .registerLoading.bind(this._implementation)();
     };
-    this.isLoading$ = this._implementation.isLoading$.pipe(distinctUntilChanged());
+    this.isLoading$ = this._implementation
+      .isLoading$.pipe(distinctUntilChanged());
   }
 }

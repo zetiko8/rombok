@@ -1,7 +1,8 @@
 import { Observable, OperatorFunction, of, pipe, throwError } from 'rxjs';
 import { tap, catchError, finalize } from 'rxjs/operators';
 
-export function log<T>(sourceName: string): OperatorFunction<T, T> {
+export function log<T>(sourceName: string):
+OperatorFunction<T, T> {
   return  pipe(
     tap(value => console.log(sourceName, value)),
     catchError(error => {
@@ -12,4 +13,5 @@ export function log<T>(sourceName: string): OperatorFunction<T, T> {
   );
 }
 
-export const immediate$ = (): Observable<string> => of('immediate');
+export const immediate$
+ = (): Observable<string> => of('immediate');

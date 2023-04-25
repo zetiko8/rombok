@@ -1,5 +1,5 @@
 import {
-  Observable, 
+  Observable,
   ReplaySubject,
   OperatorFunction,
   pipe,
@@ -31,7 +31,7 @@ export class LoadableRx<T> {
   private options: LoadableObservableOptionsDefined;
   private _loadingError$ = new ReplaySubject<Error | null>(1);
   private loadContext: LoadContext;
-  
+
   isLoading$: Observable<boolean>;
   loadingError$ = this._loadingError$
     .pipe(
@@ -50,10 +50,10 @@ export class LoadableRx<T> {
       switch: options ? !!(options.switch) : false,
     };
     this.options = opts;
-    
+
     // setup initial error state
     this._setError(null);
-    
+
     // setup loading state
     const loadStrategy = opts.switch ? LOAD_STRATEGY.only_one_load_at_a_time : LOAD_STRATEGY.default;
     const loadContext = new LoadContext(loadStrategy);
@@ -73,7 +73,7 @@ export class LoadableRx<T> {
   private _registerLoadingStart (): void {
     this.loadContext.registerLoading();
   }
-  
+
   private _registerLoadingEnd (): void {
     this.loadContext.registerLoadEnd();
   }
@@ -101,7 +101,7 @@ export function loadableRx<T>(
     handleAndCodifyTriggerError(),
     registerLoadingStartEvent(registerLoadingStart),
     tap(() => setError(null)),
-    combinePipe(loadArguments => 
+    combinePipe(loadArguments =>
       loadFn(loadArguments)
         .pipe(handleLoadFunctionError(options.errorStrategy, setError, registerLoadingEnd)),
     ),
