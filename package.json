@@ -7,7 +7,11 @@
   "repository": "https://github.com/zetiko8/rombok",
   "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
   "private": false,
-  "keywords": ["rxjs", "rombok", "LoadableRx"],
+  "keywords": [
+    "rxjs",
+    "rombok",
+    "LoadableRx"
+  ],
   "scripts": {
     "test": "mocha --config .mocharc.json src/**/*.spec.ts",
     "test:watch": "mocha --config .mocharc.json --watch src/**/*.spec.ts",
@@ -16,8 +20,8 @@
     "example": "npm run build && rimraf example/lib && copyfiles lib/* example && cd example && snowpack dev",
     "build": "rimraf lib && tsc",
     "lint": "eslint",
-    "prepare" : "npm run build",
-    "prepublishOnly" : "npm run test"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test"
   },
   "dependencies": {
     "rxjs": "^7.5.6"
@@ -44,5 +48,7 @@
     "typescript": "^4.1.2",
     "typescript-transform-paths": "^2.1.0"
   },
-  "files": ["lib/**/*"]
+  "files": [
+    "lib/**/*"
+  ]
 }
