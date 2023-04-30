@@ -3,13 +3,13 @@ import { Process } from '..';
 import { mergeMap, take } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { Observable } from 'rxjs';
-import { TestError } from '../../test.helpers';
+import { TestError, after, ignoreErrorSub } from '../../test.helpers';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { log } from '../../utils';
 
 const values = {
-  t: true, f: false, a: 'a', b: 'b', n: null, v: 'v' };
+  t: true, f: false, a: 'a', b: 'b', c: 'c', n: null, v: 'v' };
 
 type ColdCreator = <T = string>(marbles: string, values?: {
   [marble: string]: T;
@@ -1264,6 +1264,215 @@ export const scenarios = {
           expectObservable(p.success$).toBe('--------a--', values);
           expectObservable(p.error$)
             .toBe('--n-n-e-n', { ...values, e: error });
+        });
+      },
+    },
+  },
+  ['shareReplay - success as an event']: {
+    scenario: (
+      createProcess: <T>() => Process<T>,
+      cold: ColdCreator,
+    ): [
+    Process<unknown>,
+    TestError,
+  ] => {
+    /**
+     * The user click something,
+     * before the result is resolved
+     * the user clicks something else.
+     * The second click is resolved before
+     * the first click, and the second click errors
+     */
+      const p = createProcess();
+      const error = new TestError('Test error');
+      return [ p, error ];
+    },
+    behavior: {
+      common: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p ]
+             = scenarios['shareReplay - success as an event']
+               .scenario(createProcess, cold);
+
+          expectObservable(p.success$)
+            .toBe('-a-----b----c', values);
+          expectObservable(p.success$)
+            .toBe('-a-----b----c', values);
+          after(cold('---t', values), () =>
+            expectObservable(p.success$)
+              .toBe('-------b----c'));
+
+          p.execute(() => cold('-a', values)).subscribe();
+          after(cold('-----t', values),
+            () => p.execute(() => cold('--b', values))
+              .subscribe());
+          after(cold('----------t', values),
+            () => p.execute(() => cold('--c', values))
+              .subscribe());
+
+        });
+      },
+    },
+  },
+  ['shareReplay - error as state']: {
+    scenario: (
+      createProcess: <T>() => Process<T>,
+      cold: ColdCreator,
+    ): [
+    Process<unknown>,
+    TestError,
+  ] => {
+    /**
+     * The user click something,
+     * before the result is resolved
+     * the user clicks something else.
+     * The second click is resolved before
+     * the first click, and the second click errors
+     */
+      const p = createProcess();
+      const error = new TestError('Test error');
+      return [ p, error ];
+    },
+    behavior: {
+      common: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, error ]
+             = scenarios['shareReplay - error as state']
+               .scenario(createProcess, cold);
+
+          expectObservable(p.error$)
+            .toBe('ne---n-n--n-e', { ...values, e: error });
+          expectObservable(p.error$)
+            .toBe('ne---n-n--n-e', { ...values, e: error });
+          after(cold('---t', values), () =>
+            expectObservable(p.error$)
+              .toBe('---e-n-n--n-e', { ...values, e: error }));
+          after(cold('------t', values), () =>
+            expectObservable(p.error$)
+              .toBe('------nn--n-e', { ...values, e: error }));
+
+          p.execute(() => cold('-#', values, error))
+            .subscribe(ignoreErrorSub);
+          after(cold('-----t', values),
+            () => p.execute(() => cold('--b', values, error))
+              .subscribe(ignoreErrorSub));
+          after(cold('----------t', values),
+            () => p.execute(() => cold('--#', values, error))
+              .subscribe(ignoreErrorSub));
+
+        });
+      },
+    },
+  },
+  ['shareReplay - loading as state']: {
+    scenario: (
+      createProcess: <T>() => Process<T>,
+      cold: ColdCreator,
+    ): [
+    Process<unknown>,
+    TestError,
+  ] => {
+    /**
+     * The user click something,
+     * before the result is resolved
+     * the user clicks something else.
+     * The second click is resolved before
+     * the first click, and the second click errors
+     */
+      const p = createProcess();
+      const error = new TestError('Test error');
+      return [ p, error ];
+    },
+    behavior: {
+      common: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p ]
+             = scenarios['shareReplay - loading as state']
+               .scenario(createProcess, cold);
+
+          expectObservable(p.inProgress$)
+            .toBe('(ft)f---t-f--t-f', values);
+          expectObservable(p.inProgress$)
+            .toBe('(ft)f---t-f--t-f', values);
+          after(cold('---t', values), () =>
+            expectObservable(p.inProgress$)
+              .toBe('---f-t-f--t-f', values));
+
+          p.execute(() => cold('-a', values)).subscribe();
+          after(cold('-----t', values),
+            () => p.execute(() => cold('--b', values))
+              .subscribe());
+          after(cold('----------t', values),
+            () => p.execute(() => cold('--c', values))
+              .subscribe());
+
+        });
+      },
+    },
+  },
+  ['memoryLeak']: {
+    scenario: (
+      createProcess: <T>() => Process<T>,
+      cold: ColdCreator,
+    ): [
+    Process<unknown>,
+    TestError,
+  ] => {
+    /**
+     * The user click something,
+     * before the result is resolved
+     * the user clicks something else.
+     * The second click is resolved before
+     * the first click, and the second click errors
+     */
+      const p = createProcess();
+      const error = new TestError('Test error');
+      return [ p, error ];
+    },
+    behavior: {
+      common: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, error ]
+             = scenarios['memoryLeak']
+               .scenario(createProcess, cold);
+
+          /**
+           * Because of the shareReplay not cleaning up subscriptions
+           * https://github.com/ReactiveX/rxjs/issues/3336
+           * I have become paranoid oif memory leaks.
+           * In the issue, there is a great test for
+           * finding out if the source was actually
+           * unsubscribed from - but in this case, i see no
+           * way to test it, without introducing the side - affects
+           * that have nothing to do in the code.
+           *
+           * So let's say TODO
+           */
+          const sub0 = p.error$.subscribe();
+          after(cold('---t', values), () =>
+            sub0.unsubscribe());
+
+          p.execute(() => cold('-#', values, error))
+            .subscribe(ignoreErrorSub);
+          after(cold('-----t', values),
+            () => p.execute(() => cold('--b', values, error))
+              .subscribe(ignoreErrorSub));
+          after(cold('----------t', values),
+            () => p.execute(() => cold('--#', values, error))
+              .subscribe(ignoreErrorSub));
+
         });
       },
     },

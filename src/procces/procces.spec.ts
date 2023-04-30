@@ -79,6 +79,19 @@ describe('Process', () => {
       .behavior.common(createProcess, scheduler));
     it('--exec(------a)----exec(--#)', () => scenarios['--exec(------a)----exec(--#)']
       .behavior.common(createProcess, scheduler));
+    // TODO - shareReplay tests for other strategies
+    it('shareReplay - success as an event',
+      () => scenarios['shareReplay - success as an event']
+        .behavior.common(createProcess, scheduler));
+    it('shareReplay - error as state',
+      () => scenarios['shareReplay - error as state']
+        .behavior.common(createProcess, scheduler));
+    it('shareReplay - loading as state',
+      () => scenarios['shareReplay - loading as state']
+        .behavior.common(createProcess, scheduler));
+    it('memoryLeak',
+      () => scenarios['memoryLeak']
+        .behavior.common(createProcess, scheduler));
   });
   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT', () => {
     const createProcess

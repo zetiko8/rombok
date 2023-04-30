@@ -1,6 +1,6 @@
 import { TestScheduler } from 'rxjs/testing';
 import { from, Observable, of } from 'rxjs';
-import { delay, filter, map, concatMap } from 'rxjs';
+import { delay, filter, map, concatMap, take, mergeMap } from 'rxjs/operators';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
@@ -149,8 +149,14 @@ export class TestError extends Error {
   }
 }
 
-export function after (time: number, fn: () => void): void {
-  immediate$().pipe(delay(time)).subscribe(fn);
+export function after (
+  time: number | Observable<unknown>,
+  fn: () => void,
+): void {
+  if (typeof time === 'number')
+    immediate$().pipe(delay(time)).subscribe(fn);
+  else
+    time.subscribe(fn);
 }
 
 export function myScheduler<T>(pattern: string, resultSet: { [key: string]: T }, interval: number, debug = ''): Observable<T> {

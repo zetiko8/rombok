@@ -19,7 +19,7 @@ import {
 } from 'rxjs/operators';
 import { LoadContext1, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '~/utils';
+import { log } from '../utils';
 
 export interface IProcess<T> {
     error$: Observable<Error | null>;
