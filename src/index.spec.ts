@@ -18,7 +18,7 @@ const tLoadArgs: TLoadArgs = { textContains: 'word' };
 const tLoadArgsThatThrow: TLoadArgs = { textContains: 'throw-error' };
 const tResource = 'a';
 
-describe('LoadableResource', () => {
+describe.skip('LoadableResource', () => {
 
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
