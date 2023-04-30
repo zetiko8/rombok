@@ -17,7 +17,7 @@ const expect = chai.expect;
 
 logger.logLevel = 3;
 
-describe.only('Resource', () => {
+describe('Resource', () => {
 
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
