@@ -1,6 +1,6 @@
 import { TestScheduler } from 'rxjs/testing';
 import { from, Observable, of } from 'rxjs';
-import { delay, filter, map, concatMap, take, mergeMap } from 'rxjs/operators';
+import { delay, filter, map, concatMap } from 'rxjs/operators';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
@@ -16,6 +16,17 @@ export interface TResource {
 export interface TLoadArgs {
   textContains: string,
 }
+
+export const GLOBAL = {
+  sideEffect0Count: 0,
+  sideEffect1Count: 0,
+  sideEffect2Count: 0,
+  reset: () => {
+    GLOBAL.sideEffect0Count = 0;
+    GLOBAL.sideEffect1Count = 0;
+    GLOBAL.sideEffect2Count = 0;
+  },
+};
 
 export function getSpyWrapper(sinon: SinonSandbox): {
     fn: (args: TLoadArgs) => Observable<any>,

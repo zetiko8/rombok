@@ -5,7 +5,7 @@ import { TestScheduler } from 'rxjs/testing';
 import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
-import { prepareTestScheduler } from '../test.helpers';
+import { GLOBAL, prepareTestScheduler } from '../test.helpers';
 import { logger } from '../debug-helpers';
 import { scenarios } from './test/scenarios';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -24,6 +24,7 @@ describe('Resource', () => {
   beforeEach(() => {
     scheduler = prepareTestScheduler();
     sbx = createSandbox();
+    GLOBAL.reset();
   });
   afterEach(() => {
     scheduler = prepareTestScheduler();
@@ -56,6 +57,12 @@ describe('Resource', () => {
       .behavior.switch(resourceOptions, scheduler));
     it('trigg(-t-t{(-----a)(-b)})', () => scenarios['trigg(-t-t{(-----a)(-b)})']
       .behavior.switch(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - data$', () => scenarios['shareReplay - late to party folks - data$']
+      .behavior.common(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - error$', () => scenarios['shareReplay - late to party folks - error$']
+      .behavior.common(resourceOptions, scheduler));
+    it('memoryLeak', () => scenarios['memoryLeak']
+      .behavior.common(resourceOptions, scheduler));
   });
 
   describe('MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE', () => {
@@ -76,6 +83,12 @@ describe('Resource', () => {
     it('trigg(-t-t{(---a)(-b)})', () => scenarios['trigg(-t-t{(---a)(-b)})']
       .behavior.common(resourceOptions, scheduler));
     it('trigg(-t-t{(-----a)(-b)})', () => scenarios['trigg(-t-t{(-----a)(-b)})']
+      .behavior.common(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - data$', () => scenarios['shareReplay - late to party folks - data$']
+      .behavior.common(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - error$', () => scenarios['shareReplay - late to party folks - error$']
+      .behavior.common(resourceOptions, scheduler));
+    it('memoryLeak', () => scenarios['memoryLeak']
       .behavior.common(resourceOptions, scheduler));
   });
 
@@ -98,5 +111,11 @@ describe('Resource', () => {
       .behavior.concurrent(resourceOptions, scheduler));
     it('trigg(-t-t{(-----a)(-b)})', () => scenarios['trigg(-t-t{(-----a)(-b)})']
       .behavior.concurrent(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - data$', () => scenarios['shareReplay - late to party folks - data$']
+      .behavior.common(resourceOptions, scheduler));
+    it('shareReplay - late to party folks - error$', () => scenarios['shareReplay - late to party folks - error$']
+      .behavior.common(resourceOptions, scheduler));
+    it('memoryLeak', () => scenarios['memoryLeak']
+      .behavior.common(resourceOptions, scheduler));
   });
 });

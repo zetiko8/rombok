@@ -16,6 +16,7 @@ import {
   map,
   startWith,
   mergeMap,
+  share,
 } from 'rxjs/operators';
 import { Process } from '../procces/index';
 import { LoadContext1, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
@@ -64,7 +65,9 @@ export class Resource <LoadingArguments, ResourceType> {
               process.execute(
                 () => this.loadFn(args))
                 .pipe(catchError(() => EMPTY))),
-            shareReplay(1),
+            share({
+              connector: () => new ReplaySubject<ResourceType>(1),
+            }),
           );
 
         this.inProgress$
@@ -93,7 +96,9 @@ export class Resource <LoadingArguments, ResourceType> {
               process.execute(
                 () => this.loadFn(args))
                 .pipe(catchError(() => EMPTY))),
-            shareReplay(1),
+            share({
+              connector: () => new ReplaySubject<ResourceType>(1),
+            }),
           );
 
         this.inProgress$
@@ -140,7 +145,9 @@ export class Resource <LoadingArguments, ResourceType> {
               _loadingError$.next(null);
               loadContext.registerLoadEnd();
             }),
-            shareReplay(1),
+            share({
+              connector: () => new ReplaySubject<ResourceType>(1),
+            }),
           );
       }
     }
