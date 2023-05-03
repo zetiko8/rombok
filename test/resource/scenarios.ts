@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import { TestScheduler } from 'rxjs/testing';
 import { Observable, shareReplay, tap } from 'rxjs';
-import { GLOBAL, TestError, after, ignoreErrorSub } from '../../test.helpers';
+import { GLOBAL, TestError, after, ignoreErrorSub } from '../test.helpers';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../../utils';
-import { Resource, ResourceOptions } from '..';
+import { Resource, ResourceOptions } from '../../src';
 import { HotObservable } from 'rxjs/internal/testing/HotObservable';
 import { expect } from 'chai';
 

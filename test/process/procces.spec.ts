@@ -1,20 +1,15 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { Process } from '..';
-import { MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
+import { Process } from '../../src';
+import { MULTIPLE_EXECUTIONS_STRATEGY } from '../../src/loading-handling';
 import { TestScheduler } from 'rxjs/testing';
 import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
 import { prepareTestScheduler } from '../test.helpers';
-import { logger } from '../debug-helpers';
-import { scenarios } from './test/scenarios';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../utils';
+import { scenarios } from './scenarios';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
-logger.logLevel = 3;
 
 describe('Process', () => {
 
@@ -38,7 +33,7 @@ describe('Process', () => {
 
   describe('MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE', () => {
     const createProcess
-      = () => new Process<any>();
+      = () => new Process<any>() as any;
     it('--a', () => scenarios['--a']
       .behavior.common(createProcess, scheduler));
     it('--exec(--a)', () => scenarios['--exec(--a)']
@@ -95,10 +90,10 @@ describe('Process', () => {
   });
   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT', () => {
     const createProcess
-      = () => new Process<any>({
+      = () => new Process({
         multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY
           .CONCURRENT,
-      });
+      }) as any;
     it('--a', () => scenarios['--a']
       .behavior.common(createProcess, scheduler));
     it('--exec(--a)', () => scenarios['--exec(--a)']

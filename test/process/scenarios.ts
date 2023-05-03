@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { Process } from '..';
+import { Process } from '../../src';
 import { mergeMap, take } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { Observable } from 'rxjs';
-import { TestError, after, ignoreErrorSub } from '../../test.helpers';
+import { TestError, after, ignoreErrorSub } from '../test.helpers';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../../utils';
 
 const values = {
   t: true, f: false, a: 'a', b: 'b', c: 'c', n: null, v: 'v' };

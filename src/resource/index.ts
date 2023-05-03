@@ -19,9 +19,7 @@ import {
   share,
 } from 'rxjs/operators';
 import { Process } from '../procces/index';
-import { LoadContext1, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../utils';
+import { LoadContext, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
 
 export interface ResourceOptions {
     multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY,
@@ -109,7 +107,7 @@ export class Resource <LoadingArguments, ResourceType> {
       else {
 
         const loadContext
-        = new LoadContext1(options.multiple_executions_strategy);
+        = new LoadContext(options.multiple_executions_strategy);
 
         const _loadingError$ = new ReplaySubject<Error | null>(1);
         this.error$ = _loadingError$

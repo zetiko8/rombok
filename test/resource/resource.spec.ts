@@ -1,21 +1,15 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { Resource, ResourceOptions } from '.';
-import { MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
+import { Resource, ResourceOptions, MULTIPLE_EXECUTIONS_STRATEGY } from '../../src';
 import { TestScheduler } from 'rxjs/testing';
 import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
 import { GLOBAL, prepareTestScheduler } from '../test.helpers';
-import { logger } from '../debug-helpers';
-import { scenarios } from './test/scenarios';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../utils';
+import { scenarios } from './scenarios';
 import { of } from 'rxjs';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
-logger.logLevel = 3;
 
 describe('Resource', () => {
 

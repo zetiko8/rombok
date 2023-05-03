@@ -1,12 +1,27 @@
 import { TestScheduler } from 'rxjs/testing';
-import { from, Observable, of } from 'rxjs';
-import { delay, filter, map, concatMap } from 'rxjs/operators';
+import { from, Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
+import { delay, filter, map, concatMap, tap, catchError, finalize } from 'rxjs/operators';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
-import { immediate$ } from './utils';
 chai.use(sinonChai);
 const expect = chai.expect;
+
+export const logger = {
+  logLevel: 0,
+  debug (...args: unknown[]): void {
+    if (this.logLevel > 3) console.log(...args);
+  },
+  log (...args: unknown[]): void {
+    if (this.logLevel > 2) console.log(...args);
+  },
+  warn (...args: unknown[]): void {
+    if (this.logLevel > 1) console.log(...args);
+  },
+  error (...args: unknown[]): void {
+    if (this.logLevel > 0) console.log(...args);
+  },
+};
 
 export interface TResource {
   id: number,
@@ -184,3 +199,30 @@ export function myScheduler<T>(pattern: string, resultSet: { [key: string]: T },
     map(char => resultSet[char]),
   );
 }
+
+export function log<T>(
+  sourceName: string, prop: string | null = null):
+OperatorFunction<T, T> {
+  return pipe(
+    tap(value => {
+      if (prop === null)
+        console.log(sourceName, value);
+      else {
+        const obj = value as { [key: string]: any };
+        try {
+          console.log(sourceName, obj[prop]);
+        } catch (error) {
+          console.log(sourceName, value);
+        }
+      }
+    }),
+    catchError(error => {
+      console.log(sourceName, 'ERROR', error.message);
+      return throwError(error);
+    }),
+    finalize(() => console.log(sourceName, 'COMPLETED')),
+  );
+}
+
+export const immediate$
+ = (): Observable<string> => of('immediate');

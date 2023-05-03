@@ -17,9 +17,7 @@ import {
   distinctUntilChanged,
   startWith,
 } from 'rxjs/operators';
-import { LoadContext1, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { log } from '../utils';
+import { LoadContext, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
 
 export interface IProcess<T> {
     error$: Observable<Error | null>;
@@ -28,7 +26,7 @@ export interface IProcess<T> {
   }
 
 export class Process<T> implements IProcess<T> {
-    private _loadContext: LoadContext1;
+    private _loadContext: LoadContext;
     private _inProgress$
      = new BehaviorSubject<boolean>(false);
     public inProgress$: Observable<boolean>;
@@ -52,7 +50,7 @@ export class Process<T> implements IProcess<T> {
       this._options = options;
 
       this._loadContext
-        = new LoadContext1(this._options.multipleExecutionsStrategy);
+        = new LoadContext(this._options.multipleExecutionsStrategy);
       this.inProgress$ = this._loadContext.isLoading$
         .pipe(
           startWith(false),

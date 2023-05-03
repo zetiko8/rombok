@@ -3,3 +3,5 @@ lib/
 example/lib
 
 .vscode
+
+tsconfig.tsbuildinfo
