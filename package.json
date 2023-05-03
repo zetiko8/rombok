@@ -10,7 +10,8 @@
   "keywords": [
     "rxjs",
     "rombok",
-    "LoadableRx"
+    "process",
+    "resource"
   ],
   "scripts": {
     "test": "mocha --config .mocharc.json src/**/*.spec.ts",
