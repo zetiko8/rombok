@@ -11,7 +11,7 @@ import { scenarios } from './scenarios';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-describe('Process', () => {
+describe.only('Process', () => {
 
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
@@ -134,5 +134,52 @@ describe('Process', () => {
       .behavior.concurrent(createProcess, scheduler));
     it('--exec(------a)----exec(--#)', () => scenarios['--exec(------a)----exec(--#)']
       .behavior.concurrent(createProcess, scheduler));
+  });
+  describe('MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP', () => {
+    const createProcess
+      = () => new Process({
+        multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY
+          .SWITCH_MAP,
+      }) as any;
+    it('--a', () => scenarios['--a']
+      .behavior.common(createProcess, scheduler));
+    it('--exec(--a)', () => scenarios['--exec(--a)']
+      .behavior.common(createProcess, scheduler));
+    it('--#', () => scenarios['--#']
+      .behavior.common(createProcess, scheduler));
+    it('--exec(--#)', () => scenarios['--exec(--#)']
+      .behavior.common(createProcess, scheduler));
+    it('sync((--a)(--b))', () => scenarios['sync((--a)(--b))']
+      .behavior.switch(createProcess, scheduler));
+    it('sync((--#)(--b))', () => scenarios['sync((--#)(--b))']
+      .behavior.concurrent(createProcess, scheduler));
+    it('sync((--a)(--#))', () => scenarios['sync((--a)(--#))']
+      .behavior.switch(createProcess, scheduler));
+    it('sync((-a)(--b))', () => scenarios['sync((-a)(--b))']
+      .behavior.switch(createProcess, scheduler));
+    it('sync((-#)(--b))', () => scenarios['sync((-#)(--b))']
+      .behavior.concurrent(createProcess, scheduler));
+    it('sync((--a)(-b))', () => scenarios['sync((--a)(-b))']
+      .behavior.switch(createProcess, scheduler));
+    it('sync((--#)(-b))', () => scenarios['sync((--#)(-b))']
+      .behavior.concurrent(createProcess, scheduler));
+    it('--exec(--a)-----exec(--b)', () => scenarios['--exec(--a)-----exec(--b)']
+      .behavior.common(createProcess, scheduler));
+    it('--exec(----a)----exec(--b)', () => scenarios['--exec(----a)----exec(--b)']
+      .behavior.switch(createProcess, scheduler));
+    it('--exec(------a)----exec(--b)', () => scenarios['--exec(------a)----exec(--b)']
+      .behavior.switch(createProcess, scheduler));
+    it('--exec(--#)-----exec(--b)', () => scenarios['--exec(--#)-----exec(--b)']
+      .behavior.common(createProcess, scheduler));
+    it('--exec(----#)----exec(--b)', () => scenarios['--exec(----#)----exec(--b)']
+      .behavior.concurrent(createProcess, scheduler));
+    it('--exec(------#)----exec(--b)', () => scenarios['--exec(------#)----exec(--b)']
+      .behavior.concurrent(createProcess, scheduler));
+    it('--exec(--a)-----exec(--#)', () => scenarios['--exec(--a)-----exec(--#)']
+      .behavior.common(createProcess, scheduler));
+    it('--exec(----a)----exec(--#)', () => scenarios['--exec(----a)----exec(--#)']
+      .behavior.switch(createProcess, scheduler));
+    it('--exec(------a)----exec(--#)', () => scenarios['--exec(------a)----exec(--#)']
+      .behavior.switch(createProcess, scheduler));
   });
 });

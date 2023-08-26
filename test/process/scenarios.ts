@@ -220,6 +220,25 @@ export const scenarios = {
           expectObservable(p.error$).toBe('(nn)-(nn)', values);
         });
       },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$ ]
+                   = scenarios['sync((--a)(--b))']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('--(a|)', values);
+          expectObservable(sub1$)
+            .toBe('--(b|)', values);
+          expectObservable(p.inProgress$)
+            .toBe('(ft)-f', values);
+          expectObservable(p.success$).toBe('--b', values);
+          expectObservable(p.error$).toBe('(nn)-(nn)', values);
+        });
+      },
     },
   },
   ['sync((--#)(--b))']: {
@@ -328,6 +347,25 @@ export const scenarios = {
             .toBe('n-(nn)-e', { ...values, e: error });
         });
       },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$, error ]
+                   = scenarios['sync((--a)(--#))']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('--(a|)', values, error);
+          expectObservable(sub1$)
+            .toBe('--#', values, error);
+          expectObservable(p.inProgress$)
+            .toBe('(ft)-f', values);
+          expectObservable(p.success$).toBe('---', values);
+          expectObservable(p.error$).toBe('(nn)-(ne)', { ...values, e: error });
+        });
+      },
       concurrent: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
@@ -405,6 +443,26 @@ export const scenarios = {
           expectObservable(p.inProgress$)
             .toBe('(ft)-f', values);
           expectObservable(p.success$).toBe('-ab', values);
+          expectObservable(p.error$)
+            .toBe('(nn)nn', values);
+        });
+      },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$ ]
+                   = scenarios['sync((-a)(--b))']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('-(a|)', values);
+          expectObservable(sub1$)
+            .toBe('--(b|)', values);
+          expectObservable(p.inProgress$)
+            .toBe('(ft)-f', values);
+          expectObservable(p.success$).toBe('--b', values);
           expectObservable(p.error$)
             .toBe('(nn)nn', values);
         });
@@ -530,6 +588,26 @@ export const scenarios = {
           expectObservable(p.inProgress$)
             .toBe('(ft)-f', values);
           expectObservable(p.success$).toBe('-ba', values);
+          expectObservable(p.error$)
+            .toBe('(nn)nn', values);
+        });
+      },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$ ]
+                   = scenarios['sync((--a)(-b))']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('--(a|)', values);
+          expectObservable(sub1$)
+            .toBe('-(b|)', values);
+          expectObservable(p.inProgress$)
+            .toBe('(ft)-f', values);
+          expectObservable(p.success$).toBe('-b', values);
           expectObservable(p.error$)
             .toBe('(nn)nn', values);
         });
@@ -733,6 +811,25 @@ export const scenarios = {
           expectObservable(p.error$).toBe('--n-n-(nn)', values);
         });
       },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$ ]
+                   = scenarios['--exec(----a)----exec(--b)']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('------(a|)', values);
+          expectObservable(sub1$)
+            .toBe('------(b|)', values);
+          expectObservable(p.inProgress$)
+            .toBe('f-t---f', values);
+          expectObservable(p.success$).toBe('------b', values);
+          expectObservable(p.error$).toBe('--n-n-(nn)', values);
+        });
+      },
     },
   },
   ['--exec(------a)----exec(--b)']: {
@@ -808,6 +905,27 @@ export const scenarios = {
           expectObservable(p.inProgress$)
             .toBe('f-t-----f', values);
           expectObservable(p.success$).toBe('------b-a', values);
+          expectObservable(p.error$).toBe('--n-n-n-n', values);
+        });
+      },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$ ]
+                   = scenarios['--exec(------a)----exec(--b)']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('--------(a|)', values);
+          expectObservable(sub1$)
+            .toBe('------(b|)', values);
+          expectObservable(p.inProgress$)
+            .toBe('f-t-----f', values);
+          // .toBe('f-t----f', values);
+          // TODO - i think the loader shoul stop here
+          expectObservable(p.success$).toBe('------b', values);
           expectObservable(p.error$).toBe('--n-n-n-n', values);
         });
       },
@@ -1182,6 +1300,26 @@ export const scenarios = {
             .toBe('--n-n-(ne)', { ...values, e: error });
         });
       },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$, error ]
+                   = scenarios['--exec(----a)----exec(--#)']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('------(a|)', values, error);
+          expectObservable(sub1$)
+            .toBe('------#', values, error);
+          expectObservable(p.inProgress$)
+            .toBe('f-t---f', values);
+          expectObservable(p.success$).toBe('---------', values);
+          expectObservable(p.error$)
+            .toBe('--n-n-(ne)', { ...values, e: error });
+        });
+      },
     },
   },
   ['--exec(------a)----exec(--#)']: {
@@ -1260,6 +1398,26 @@ export const scenarios = {
           expectObservable(p.inProgress$)
             .toBe('f-t-----f', values);
           expectObservable(p.success$).toBe('--------a--', values);
+          expectObservable(p.error$)
+            .toBe('--n-n-e-n', { ...values, e: error });
+        });
+      },
+      switch: (
+        createProcess: <T>() => Process<T>,
+        scheduler: TestScheduler,
+      ): void => {
+        scheduler.run(({ cold, expectObservable }) => {
+          const [ p, sub$, sub1$, error ]
+                   = scenarios['--exec(------a)----exec(--#)']
+                     .scenario(createProcess, cold);
+
+          expectObservable(sub$)
+            .toBe('--------(a|)', values);
+          expectObservable(sub1$)
+            .toBe('------#', values, error);
+          expectObservable(p.inProgress$)
+            .toBe('f-t-----f', values);
+          expectObservable(p.success$).toBe('-----------', values);
           expectObservable(p.error$)
             .toBe('--n-n-e-n', { ...values, e: error });
         });

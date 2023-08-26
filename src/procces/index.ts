@@ -6,6 +6,7 @@ import {
   throwError,
   Subject,
   of,
+  EMPTY,
 } from 'rxjs';
 import {
   catchError,
@@ -16,6 +17,7 @@ import {
   take,
   distinctUntilChanged,
   startWith,
+  share,
 } from 'rxjs/operators';
 import { LoadContext, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
 
@@ -33,9 +35,12 @@ export class Process<T> implements IProcess<T> {
     private _error$ = new ReplaySubject<null | Error>(1);
     public error$ = this._error$
       .pipe(observeOn(asyncScheduler));
-    private _success$ = new Subject<T>();
-    public success$ = this._success$
-      .pipe(observeOn(asyncScheduler));
+    private readonly _success$ = new Subject<T>();
+    public readonly success$: Observable<T>;
+
+    private readonly _trigger
+      = new ReplaySubject<() => Observable<T>>(1);
+    private readonly _pipeline$!: Observable<T>;
 
     private _options: {
       multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY,
@@ -57,9 +62,46 @@ export class Process<T> implements IProcess<T> {
           observeOn(asyncScheduler),
           distinctUntilChanged(),
         );
+
+      if (
+        this._options.multipleExecutionsStrategy
+          ===
+          MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE
+      ) {
+        this.success$ = this._success$
+          .pipe(
+            observeOn(asyncScheduler),
+            distinctUntilChanged(),
+          );
+      }
+      else if (
+        this._options.multipleExecutionsStrategy
+          ===
+          MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
+      ) {
+        this.success$ = this._success$
+          .pipe(
+            observeOn(asyncScheduler),
+            distinctUntilChanged(),
+          );
+      }
+      else if (
+        this._options.multipleExecutionsStrategy
+          ===
+          MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP
+      ) {
+        this.success$
+          = this._trigger
+            .pipe(
+              switchMap(fn => fn()),
+              observeOn(asyncScheduler),
+              distinctUntilChanged(),
+            );
+      }
+      else throw Error('Not implemented jet');
     }
 
-    execute<T> (
+    execute (
       processFunction: () => Observable<T>,
     ): Observable<T> {
       if (
@@ -93,8 +135,6 @@ export class Process<T> implements IProcess<T> {
             }),
             tap((result) => {
               this._error$.next(null);
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - TODO help me
               this._success$.next(result);
               this._inProgress$.next(false);
               this._loadContext.registerLoadEnd();
@@ -129,14 +169,59 @@ export class Process<T> implements IProcess<T> {
             }),
             tap((result) => {
               this._error$.next(null);
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - TODO help me
               this._success$.next(result);
               this._inProgress$.next(false);
               this._loadContext.registerLoadEnd();
             }),
             take(1),
           );
+      }
+      else if (
+        this._options.multipleExecutionsStrategy
+        ===
+        MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP
+      ) {
+
+        const load$ = of('immediate')
+          .pipe(
+            tap(() => {
+              this._inProgress$.next(true);
+            }),
+            observeOn(asyncScheduler),
+            tap(() => {
+              this._error$.next(null);
+              this._loadContext.registerLoading();
+            }),
+            switchMap(
+              () => processFunction()
+                .pipe(take(1)),
+            ),
+            catchError(error => {
+              this._inProgress$.next(false);
+              this._loadContext.registerLoadEnd();
+              this._error$.next(error);
+              return throwError(() => error);
+            }),
+            tap((result) => {
+              this._error$.next(null);
+              this._success$.next(result);
+              this._inProgress$.next(false);
+              this._loadContext.registerLoadEnd();
+            }),
+            take(1),
+            share({ connector: () => new ReplaySubject<T>(1) }),
+          );
+
+        this._trigger.next(
+          () => {
+            return load$
+              .pipe(
+                catchError(() => EMPTY),
+              );
+          },
+        );
+
+        return load$;
       }
       else throw Error('Not implemented jet');
     }
