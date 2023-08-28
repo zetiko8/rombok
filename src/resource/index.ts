@@ -127,21 +127,21 @@ export class Resource <LoadingArguments, ResourceType> {
           .pipe(
             tap(() => {
               _loadingError$.next(null);
-              loadContext.registerLoading();
+              loadContext.registerLoading('');
             }),
             switchMap(args => {
               return this.loadFn(args)
                 .pipe(
                   catchError(error => {
                     _loadingError$.next(error);
-                    loadContext.registerLoadEnd();
+                    loadContext.registerLoadEnd('');
                     return EMPTY;
                   }),
                 );
             }),
             tap(() => {
               _loadingError$.next(null);
-              loadContext.registerLoadEnd();
+              loadContext.registerLoadEnd('');
             }),
             share({
               connector: () => new ReplaySubject<ResourceType>(1),

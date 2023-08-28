@@ -77,12 +77,36 @@ class MultipleLoadsAtTimeLoadingContext {
   isLoading$ = this._isLoading$.asObservable();
 }
 
+class SwitchLoadingContext {
+  private loadToken = '';
+
+  registerLoading(loadToken: string) {
+    this.loadToken = loadToken;
+    this.setLoadingState(true);
+  }
+
+  registerLoadEnd(loadToken: string) {
+    if (this.loadToken === loadToken) {
+      this.setLoadingState(false);
+    }
+  }
+
+  private setLoadingState(isLoading: boolean) {
+    this._isLoading$.next(isLoading);
+  }
+
+  private _isLoading$ = new ReplaySubject<boolean>(1);
+  isLoading$ = this._isLoading$.asObservable();
+
+}
+
 export class LoadContext {
   private _implementation:
     | OnlyOneLoadAtTimeLoadingContext
-    | MultipleLoadsAtTimeLoadingContext;
-  registerLoading: () => void;
-  registerLoadEnd: () => void;
+    | MultipleLoadsAtTimeLoadingContext
+    | SwitchLoadingContext;
+  registerLoading: (loadToken: string) => void;
+  registerLoadEnd: (loadToken: string) => void;
   isLoading$: Observable<boolean>;
 
   constructor(loadStrategy = MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE) {
@@ -91,16 +115,16 @@ export class LoadContext {
        = new OnlyOneLoadAtTimeLoadingContext();
     if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP)
       this._implementation
-       = new MultipleLoadsAtTimeLoadingContext();
+       = new SwitchLoadingContext();
     else this._implementation
      = new MultipleLoadsAtTimeLoadingContext();
-    this.registerLoadEnd = () => {
+    this.registerLoadEnd = (loadToken: string) => {
       return this._implementation
-        .registerLoadEnd.bind(this._implementation)();
+        .registerLoadEnd.bind(this._implementation)(loadToken);
     };
-    this.registerLoading = () => {
+    this.registerLoading = (loadToken: string) => {
       return this._implementation
-        .registerLoading.bind(this._implementation)();
+        .registerLoading.bind(this._implementation)(loadToken);
     };
     this.isLoading$ = this._implementation
       .isLoading$.pipe(distinctUntilChanged());

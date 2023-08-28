@@ -18,8 +18,11 @@ import {
   distinctUntilChanged,
   startWith,
   share,
+  map,
+  mergeMap,
 } from 'rxjs/operators';
 import { LoadContext, MULTIPLE_EXECUTIONS_STRATEGY } from '../loading-handling';
+import { randomString } from '../helpers';
 
 export interface IProcess<T> {
     error$: Observable<Error | null>;
@@ -121,7 +124,7 @@ export class Process<T> implements IProcess<T> {
             observeOn(asyncScheduler),
             tap(() => {
               this._error$.next(null);
-              this._loadContext.registerLoading();
+              this._loadContext.registerLoading('');
             }),
             switchMap(
               () => processFunction()
@@ -129,7 +132,7 @@ export class Process<T> implements IProcess<T> {
             ),
             catchError(error => {
               this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
+              this._loadContext.registerLoadEnd('');
               this._error$.next(error);
               return throwError(error);
             }),
@@ -137,7 +140,7 @@ export class Process<T> implements IProcess<T> {
               this._error$.next(null);
               this._success$.next(result);
               this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
+              this._loadContext.registerLoadEnd('');
             }),
             take(1),
           );
@@ -155,7 +158,7 @@ export class Process<T> implements IProcess<T> {
             observeOn(asyncScheduler),
             tap(() => {
               this._error$.next(null);
-              this._loadContext.registerLoading();
+              this._loadContext.registerLoading('');
             }),
             switchMap(
               () => processFunction()
@@ -163,7 +166,7 @@ export class Process<T> implements IProcess<T> {
             ),
             catchError(error => {
               this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
+              this._loadContext.registerLoadEnd('');
               this._error$.next(error);
               return throwError(error);
             }),
@@ -171,7 +174,7 @@ export class Process<T> implements IProcess<T> {
               this._error$.next(null);
               this._success$.next(result);
               this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
+              this._loadContext.registerLoadEnd('');
             }),
             take(1),
           );
@@ -182,35 +185,54 @@ export class Process<T> implements IProcess<T> {
         MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP
       ) {
 
-        const load$ = of('immediate')
+        const load$: Observable<T> = (of('immediate')
           .pipe(
-            tap(() => {
-              this._inProgress$.next(true);
-            }),
             observeOn(asyncScheduler),
-            tap(() => {
+            map(() => randomString()),
+            tap((loadToken) => {
               this._error$.next(null);
-              this._loadContext.registerLoading();
+              this._loadContext.registerLoading(loadToken);
             }),
             switchMap(
-              () => processFunction()
-                .pipe(take(1)),
+              (loadToken) => processFunction()
+                .pipe(
+                  take(1),
+                  map(result => {
+                    return {
+                      result,
+                      hasError:
+                      false,
+                      error: null,
+                      loadToken,
+                    };
+                  }),
+                  catchError(error => {
+                    return of({
+                      result: null,
+                      hasError: true,
+                      error: error,
+                      loadToken,
+                    });
+                  }),
+                ),
             ),
-            catchError(error => {
-              this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
-              this._error$.next(error);
-              return throwError(() => error);
+            mergeMap(resultWrapper => {
+              if (resultWrapper.hasError) {
+                this._loadContext.registerLoadEnd(resultWrapper.loadToken);
+                this._error$.next(resultWrapper.error);
+                return throwError(() => resultWrapper.error);
+              }
+              else return of(resultWrapper);
             }),
-            tap((result) => {
+            tap((resultWrapper) => {
               this._error$.next(null);
-              this._success$.next(result);
-              this._inProgress$.next(false);
-              this._loadContext.registerLoadEnd();
+              this._success$.next(resultWrapper.result as T);
+              this._loadContext.registerLoadEnd(resultWrapper.loadToken);
             }),
+            map(r => (r.result) as T),
             take(1),
             share({ connector: () => new ReplaySubject<T>(1) }),
-          );
+          )) as Observable<T>;
 
         this._trigger.next(
           () => {

@@ -15,4 +15,8 @@ export function registerLoadingEndEvent<T>(
   }));
 }
 
+export function randomString(): string {
+  return String(Math.random());
+}
+
 
