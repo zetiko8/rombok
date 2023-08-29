@@ -105,9 +105,9 @@ export function prepareTestScheduler (): TestScheduler {
     } catch (error) {
 
       // eslint-disable-next-line no-console
-      console.log(expected);
+      // console.log(expected);
       // eslint-disable-next-line no-console
-      console.log(actual);
+      // console.log(actual);
       const e = Error(`E: ${drawMarbleFromDefs(expected)}
      A: ${drawMarbleFromDefs(actual)}`);
       e.stack = '';
