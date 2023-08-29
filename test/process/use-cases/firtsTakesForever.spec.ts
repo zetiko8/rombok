@@ -38,7 +38,7 @@ const scenarios = {
         p.execute(
           () => {
             if (value === 'o')
-              return cold('--------------#', {}, error);
+              return cold('--------------' + value);
             else
               return cold('--' + value);
           },
@@ -55,12 +55,11 @@ const scenarios = {
 };
 
 /**
- * The point of this test is to test the loading indicator in switch case.
- * Because the first request is supposed to be canceled,
- * th loading indicator should not be triggered by its completion.
- * It should complete when the third request completes.
+ * The point of this test is to test the concurrent mode,
+ * While the firs takes forever, the second and third request should
+ * wait for it to finish before starting
  */
-describe('linear first errors and takes for ever', () => {
+describe('first takes for ever', () => {
 
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
@@ -78,37 +77,35 @@ describe('linear first errors and takes for ever', () => {
       const process
             = new Process(
               { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
-      const td = scenarios.linear.scenario(
+      scenarios.linear.scenario(
         () => process as any,
         cold,
       );
-      const error = td[1];
 
       expectObservable(process.success$)
-        .toBe('---------p---r');
+        .toBe('---------p---r---o');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---e', { ...values, e: error });
+        .toBe('---n---n-n-n-n---n', values);
       expectObservable(process.inProgress$)
         .toBe('f--t-------------f', values);
     });
   });
-  it.only('concurent', () => {
+  it('concurrent', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
               { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE });
-      const td = scenarios.linear.scenario(
+      scenarios.linear.scenario(
         () => process as any,
         cold,
       );
-      const error = td[1];
 
       expectObservable(process.success$)
-        .toBe('-------------------(pr)'); // TODO - this is fishy (i think r should still wait)
+        .toBe('-----------------o--p--r)');
       expectObservable(process.error$)
-        .toBe('---n-------------(enn)-(nn)', { ...values, e: error });
+        .toBe('---n-------------nn-nn-n', values);
       expectObservable(process.inProgress$)
-        .toBe('f--t-------------(ft)-f', values);
+        .toBe('f--t-------------ft-ft-f', values);
     });
   });
   it('switch', () => {
@@ -125,9 +122,10 @@ describe('linear first errors and takes for ever', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---e', { ...values, e: error });
+        .toBe('---n---n-n-n-n---n', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
     });
   });
 });
+

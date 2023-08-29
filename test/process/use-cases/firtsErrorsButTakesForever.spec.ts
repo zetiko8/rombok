@@ -5,11 +5,10 @@ import { TestScheduler } from 'rxjs/testing';
 import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
-import { prepareTestScheduler } from '../../test.helpers';
+import { ignoreErrorSub, prepareTestScheduler, TestError } from '../../test.helpers';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 
 chai.use(sinonChai);
-const expect = chai.expect;
 
 const values = {
   t: true, f: false, a: 'a', b: 'b', c: 'c', n: null, v: 'v',
@@ -23,37 +22,46 @@ const values = {
 
 
 const scenarios = {
-  secondFinishesBeforeFirst: {
+  linear: {
     scenario: (
       getProcess: <T>() => Process<T>,
       cold: ColdCreator,
     ): [
           Process<unknown>,
+          TestError,
         //   Observable<unknown>
         ] => {
 
       const p = getProcess();
+      const error = new TestError('test');
       function onWrite (value: any) {
         p.execute(
           () => {
             if (value === 'o')
-              return cold('-------' + value);
+              return cold('--------------#', {}, error);
             else
               return cold('--' + value);
           },
-        ).subscribe();
+        ).subscribe(ignoreErrorSub);
       }
       // user writes
       cold('---o').subscribe(onWrite);
       cold('-------p').subscribe(onWrite);
       cold('-----------r').subscribe(onWrite);
 
-      return [ p ];
+      return [ p, error ];
     },
   },
 };
 
-describe('second finishes before first', () => {
+/**
+ * The point of this test is to test the loading indicator in switch case.
+ * Because the first request is supposed to be canceled,
+ * th loading indicator should not be triggered by its completion.
+ * It should complete when the third request completes.
+ */
+describe('linear first errors and takes for ever', () => {
+
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
   beforeEach(() => {
@@ -64,41 +72,43 @@ describe('second finishes before first', () => {
     scheduler = prepareTestScheduler();
     sbx.restore();
   });
+
   it('merge', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
               { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
-      scenarios.secondFinishesBeforeFirst.scenario(
+      const td = scenarios.linear.scenario(
         () => process as any,
         cold,
       );
+      const error = td[1];
 
       expectObservable(process.success$)
-        .toBe('---------po--r');
+        .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-nnn-n', values);
+        .toBe('---n---n-n-n-n---e', { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--t------ft-f', values);
+        .toBe('f--t-------------f', values);
     });
   });
   it('concurent', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              // TODO - rename ONE_BY_ONE to concurent and CONCURRENT to merge
               { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE });
-      scenarios.secondFinishesBeforeFirst.scenario(
+      const td = scenarios.linear.scenario(
         () => process as any,
         cold,
       );
+      const error = td[1];
 
       expectObservable(process.success$)
-        .toBe('----------o--p--r');
+        .toBe('--------------------p--r');
       expectObservable(process.error$)
-        .toBe('---n------nn-nn-n', values);
+        .toBe('---n-------------en-nn-n', { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--t------ft-ft-f', values);
+        .toBe('f--t-------------ft-ft-f', values);
     });
   });
   it('switch', () => {
@@ -106,15 +116,16 @@ describe('second finishes before first', () => {
       const process
             = new Process(
               { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP });
-      scenarios.secondFinishesBeforeFirst.scenario(
+      const td = scenarios.linear.scenario(
         () => process as any,
         cold,
       );
+      const error = td[1];
 
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-nnn-n', values);
+        .toBe('---n---n-n-n-n---e', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
     });

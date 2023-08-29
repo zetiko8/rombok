@@ -98,11 +98,11 @@ describe('linear first errors, but second finishes before first', () => {
       const error = td[1];
 
       expectObservable(process.success$)
-        .toBe('------------p-r');
+        .toBe('-------------p--r');
       expectObservable(process.error$)
-        .toBe('---n------(en)-(nn)-n-', { ...values, e: error });
+        .toBe('---n------en-nn-n', { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--t------(ft)-(ft)-f', values);
+        .toBe('f--t------ft-ft-f', values);
     });
   });
   it('switch', () => {
