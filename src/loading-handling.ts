@@ -2,8 +2,8 @@ import { Observable, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
 
 export enum MULTIPLE_EXECUTIONS_STRATEGY {
+  MERGE_MAP,
   CONCURRENT,
-  ONE_BY_ONE,
   SWITCH_MAP,
 }
 
@@ -109,8 +109,8 @@ export class LoadContext {
   registerLoadEnd: (loadToken: string) => void;
   isLoading$: Observable<boolean>;
 
-  constructor(loadStrategy = MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE) {
-    if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE)
+  constructor(loadStrategy = MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT) {
+    if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT)
       this._implementation
        = new OnlyOneLoadAtTimeLoadingContext();
     if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP)

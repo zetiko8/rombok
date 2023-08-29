@@ -31,7 +31,7 @@
 //     });
 //   });
 
-//   describe('MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE', () => {
+//   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT', () => {
 //     const createProcess
 //       = () => new Process<any>() as any;
 //     it('--a', () => scenarios['--a']
@@ -88,11 +88,11 @@
 //       () => scenarios['memoryLeak']
 //         .behavior.common(createProcess, scheduler));
 //   });
-//   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT', () => {
+//   describe('MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP', () => {
 //     const createProcess
 //       = () => new Process({
 //         multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY
-//           .CONCURRENT,
+//           .MERGE_MAP,
 //       }) as any;
 //     it('--a', () => scenarios['--a']
 //       .behavior.common(createProcess, scheduler));

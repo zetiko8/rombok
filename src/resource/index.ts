@@ -45,13 +45,13 @@ export class Resource <LoadingArguments, ResourceType> {
       if (
         options.multiple_executions_strategy
         ===
-        MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE
+        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
       ) {
 
         const process
         = new Process<ResourceType>({
           multipleExecutionsStrategy:
-             MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE,
+             MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT,
         });
 
         this.data$ = merge(
@@ -76,13 +76,13 @@ export class Resource <LoadingArguments, ResourceType> {
       else if (
         options.multiple_executions_strategy
         ===
-        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
+        MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP
       ) {
 
         const process
         = new Process<ResourceType>({
           multipleExecutionsStrategy:
-             MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT,
+             MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
         });
 
         this.data$ = merge(

@@ -108,7 +108,7 @@ export class Process<T> implements IProcess<T> {
       multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY,
     } = {
       multipleExecutionsStrategy:
-        MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE,
+        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT,
     }) {
       this._options = options;
 
@@ -124,7 +124,7 @@ export class Process<T> implements IProcess<T> {
       if (
         this._options.multipleExecutionsStrategy
           ===
-          MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE
+          MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
       ) {
         this.success$ = this._success$
           .pipe(
@@ -135,7 +135,7 @@ export class Process<T> implements IProcess<T> {
       else if (
         this._options.multipleExecutionsStrategy
           ===
-          MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
+          MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP
       ) {
         this.success$ = this._success$
           .pipe(
@@ -165,7 +165,7 @@ export class Process<T> implements IProcess<T> {
       if (
         this._options.multipleExecutionsStrategy
         ===
-        MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE
+        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
       ) {
         const load$: Observable<T> = (of('immediate')
           .pipe(
@@ -221,7 +221,7 @@ export class Process<T> implements IProcess<T> {
       else if (
         this._options.multipleExecutionsStrategy
         ===
-        MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT
+        MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP
       ) {
         return of('immediate')
           .pipe(

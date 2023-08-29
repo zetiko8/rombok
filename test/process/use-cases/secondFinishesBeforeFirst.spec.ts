@@ -68,7 +68,7 @@ describe('second finishes before first', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP });
       scenarios.secondFinishesBeforeFirst.scenario(
         () => process as any,
         cold,
@@ -86,8 +86,7 @@ describe('second finishes before first', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              // TODO - rename ONE_BY_ONE to concurent and CONCURRENT to merge
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
       scenarios.secondFinishesBeforeFirst.scenario(
         () => process as any,
         cold,

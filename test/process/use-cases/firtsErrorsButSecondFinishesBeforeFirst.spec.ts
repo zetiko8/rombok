@@ -71,7 +71,7 @@ describe('linear first errors, but second finishes before first', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP });
       const td = scenarios.linear.scenario(
         () => process as any,
         cold,
@@ -90,7 +90,7 @@ describe('linear first errors, but second finishes before first', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.ONE_BY_ONE });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
       const td = scenarios.linear.scenario(
         () => process as any,
         cold,
