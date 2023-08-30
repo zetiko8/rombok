@@ -61,7 +61,7 @@ describe('linear first errors, but second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-nen-n-', { ...values, e: error });
+        .toBe('n---------en---', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-f', values);
       after.subscribe(() =>
@@ -81,7 +81,7 @@ describe('linear first errors, but second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('-------------p--r');
       expectObservable(process.error$)
-        .toBe('---n------en-nn-n', { ...values, e: error });
+        .toBe('n---------en-----', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-ft-f', values);
       after.subscribe(() =>
@@ -101,7 +101,7 @@ describe('linear first errors, but second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-nen-n-', { ...values, e: error });
+        .toBe('n---------en---', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
       after.subscribe(() =>

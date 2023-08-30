@@ -11,7 +11,7 @@ import { mergeMap } from 'rxjs';
  * the SWITCH_MAP strategy works even if the success
  * is not subscribed
  */
-describe.only('dumb', () => {
+describe('dumb', () => {
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
   beforeEach(() => {
@@ -103,7 +103,7 @@ describe.only('dumb', () => {
         expectObservable(sub$)
           .toBe('----a');
         expectObservable(process.error$)
-          .toBe('--n-n', values);
+          .toBe('n----', values);
       });
     });
   });
@@ -187,7 +187,7 @@ describe.only('dumb', () => {
         expectObservable(sub$)
           .toBe('----a');
         expectObservable(process.error$)
-          .toBe('--n-n', values);
+          .toBe('n----', values);
       });
     });
   });
@@ -271,7 +271,7 @@ describe.only('dumb', () => {
         expectObservable(sub$)
           .toBe('----a');
         expectObservable(process.error$)
-          .toBe('--n-n', values);
+          .toBe('n----', values);
       });
     });
   });

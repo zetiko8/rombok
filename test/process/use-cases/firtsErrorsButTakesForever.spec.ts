@@ -67,7 +67,7 @@ describe('linear first errors and takes for ever', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---e', { ...values, e: error });
+        .toBe('n----------------e', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-------------f', values);
       after.subscribe(() =>
@@ -87,7 +87,7 @@ describe('linear first errors and takes for ever', () => {
       expectObservable(process.success$)
         .toBe('--------------------p--r');
       expectObservable(process.error$)
-        .toBe('---n-------------en-nn-n', { ...values, e: error });
+        .toBe('n----------------en-----', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-------------ft-ft-f', values);
       after.subscribe(() =>
@@ -107,7 +107,7 @@ describe('linear first errors and takes for ever', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---e', { ...values, e: error });
+        .toBe('n----------------e', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
       after.subscribe(() =>

@@ -60,7 +60,7 @@ describe('second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('---------po--r');
       expectObservable(process.error$)
-        .toBe('---n---n-nnn-n', { ...values, e: error });
+        .toBe('n-------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-f', values);
       after.subscribe(() =>
@@ -80,7 +80,7 @@ describe('second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('----------o--p--r');
       expectObservable(process.error$)
-        .toBe('---n------nn-nn-n', { ...values, e: error });
+        .toBe('n----------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-ft-f', values);
       after.subscribe(() =>
@@ -100,7 +100,7 @@ describe('second finishes before first', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-nnn-n', { ...values, e: error });
+        .toBe('n-------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
       after.subscribe(() =>

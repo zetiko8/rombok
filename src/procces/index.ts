@@ -107,7 +107,11 @@ export class ConcatMapProcess<T> implements UnboundProcess<T> {
         );
     private _error$ = new ReplaySubject<null | Error>(1);
     public error$ = this._error$
-      .pipe(observeOn(asyncScheduler));
+      .pipe(
+        startWith(null),
+        observeOn(asyncScheduler),
+        distinctUntilChanged(),
+      );
     private readonly _success$ = new Subject<T>();
     public readonly success$
      = this._success$
@@ -158,7 +162,11 @@ export class MergeMapProcess<T> implements UnboundProcess<T> {
        );
     private _error$ = new ReplaySubject<null | Error>(1);
     public error$ = this._error$
-      .pipe(observeOn(asyncScheduler));
+      .pipe(
+        startWith(null),
+        observeOn(asyncScheduler),
+        distinctUntilChanged(),
+      );
     private readonly _success$ = new Subject<T>();
     public readonly success$
      = this._success$
@@ -207,7 +215,11 @@ export class SwitchMapProcess<T> implements UnboundProcess<T> {
     );
   private _error$ = new ReplaySubject<null | Error>(1);
   public error$ = this._error$
-    .pipe(observeOn(asyncScheduler));
+    .pipe(
+      startWith(null),
+      observeOn(asyncScheduler),
+      distinctUntilChanged(),
+    );
 
   private readonly _trigger
    = new ReplaySubject<() => Observable<T>>(1);

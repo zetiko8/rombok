@@ -58,7 +58,7 @@ describe('linear', () => {
       expectObservable(process.success$)
         .toBe('----o---p---r');
       expectObservable(process.error$)
-        .toBe('---nn--nn--nn', { ...values, e: error });
+        .toBe('n------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--tf--tf--tf', values);
       after.subscribe(() =>
@@ -78,7 +78,7 @@ describe('linear', () => {
       expectObservable(process.success$)
         .toBe('----o---p---r');
       expectObservable(process.error$)
-        .toBe('---nn--nn--nn', { ...values, e: error });
+        .toBe('n------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--tf--tf--tf', values);
       after.subscribe(() =>
@@ -98,7 +98,7 @@ describe('linear', () => {
       expectObservable(process.success$)
         .toBe('----o---p---r');
       expectObservable(process.error$)
-        .toBe('---nn--nn--nn', { ...values, e: error });
+        .toBe('n------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--tf--tf--tf', values);
       after.subscribe(() =>

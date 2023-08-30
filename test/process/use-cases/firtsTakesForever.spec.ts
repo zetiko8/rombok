@@ -67,7 +67,7 @@ describe('first takes for ever', () => {
       expectObservable(process.success$)
         .toBe('---------p---r---o');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---n', { ...values, e: error });
+        .toBe('n-----------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-------------f', values);
       after.subscribe(() =>
@@ -85,9 +85,9 @@ describe('first takes for ever', () => {
         = scenario(process, cold);
 
       expectObservable(process.success$)
-        .toBe('-----------------o--p--r)');
+        .toBe('-----------------o--p--r');
       expectObservable(process.error$)
-        .toBe('---n-------------nn-nn-n', { ...values, e: error });
+        .toBe('n------------------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-------------ft-ft-f', values);
       after.subscribe(() =>
@@ -107,7 +107,7 @@ describe('first takes for ever', () => {
       expectObservable(process.success$)
         .toBe('---------p---r');
       expectObservable(process.error$)
-        .toBe('---n---n-n-n-n---n', { ...values, e: error });
+        .toBe('n-------------', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
       after.subscribe(() =>

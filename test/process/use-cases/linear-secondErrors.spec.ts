@@ -61,7 +61,7 @@ describe('linear second errors', () => {
       expectObservable(process.success$)
         .toBe('-----o-------r');
       expectObservable(process.error$)
-        .toBe('---n-n-n-e-n-n-', { ...values, e: error });
+        .toBe('n--------e-n---', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-f-t-f-t-f', values);
       after.subscribe(() =>
@@ -81,7 +81,7 @@ describe('linear second errors', () => {
       expectObservable(process.success$)
         .toBe('-----o-------r');
       expectObservable(process.error$)
-        .toBe('---n-n-n-e-n-n-', { ...values, e: error });
+        .toBe('n--------e-n---', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-f-t-f-t-f', values);
       after.subscribe(() =>
@@ -101,7 +101,7 @@ describe('linear second errors', () => {
       expectObservable(process.success$)
         .toBe('-----o-------r');
       expectObservable(process.error$)
-        .toBe('---n-n-n-e-n-n-', { ...values, e: error });
+        .toBe('n--------e-n---', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-f-t-f-t-f', values);
       after.subscribe(() =>
