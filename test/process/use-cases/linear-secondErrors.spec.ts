@@ -86,11 +86,11 @@ describe('linear second errors', () => {
         .toBe('f--t-f-t-f-t-f', values);
     });
   });
-  it('concurrent', () => {
+  it('concat', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
       const td = scenarios.linear.scenario(
         () => process as any,
         cold,

@@ -201,7 +201,7 @@ export const scenarios = {
           expectObservable(p.error$).toBe('n-(nn)-n', values);
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -283,7 +283,7 @@ export const scenarios = {
             .toBe('n-(en)-n', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -366,7 +366,7 @@ export const scenarios = {
           expectObservable(p.error$).toBe('(nn)-(ne)', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -427,7 +427,7 @@ export const scenarios = {
             .toBe('n(nn)-n', values);
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -511,7 +511,7 @@ export const scenarios = {
             .toBe('n(en)-n', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -572,7 +572,7 @@ export const scenarios = {
             .toBe('n-(nn)n', values);
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -656,7 +656,7 @@ export const scenarios = {
             .toBe('n-(en)n', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -792,7 +792,7 @@ export const scenarios = {
           expectObservable(p.error$).toBe('--n---(nn)-n', values);
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -889,7 +889,7 @@ export const scenarios = {
           expectObservable(p.error$).toBe('--n-----(nn)-n', values);
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -1053,7 +1053,7 @@ export const scenarios = {
             .toBe('--n---(en)-n', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -1135,7 +1135,7 @@ export const scenarios = {
             .toBe('--n-----(en)-n', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -1280,7 +1280,7 @@ export const scenarios = {
             .toBe('--n---(nn)-e', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {
@@ -1382,7 +1382,7 @@ export const scenarios = {
             .toBe('--n-----(nn)-e', { ...values, e: error });
         });
       },
-      concurrent: (
+      concat: (
         createProcess: <T>() => Process<T>,
         scheduler: TestScheduler,
       ): void => {

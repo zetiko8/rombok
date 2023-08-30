@@ -3,7 +3,7 @@ import { distinctUntilChanged } from 'rxjs/operators';
 
 export enum MULTIPLE_EXECUTIONS_STRATEGY {
   MERGE_MAP,
-  CONCURRENT,
+  CONCAT_MAP,
   SWITCH_MAP,
 }
 
@@ -109,8 +109,8 @@ export class LoadContext {
   registerLoadEnd: (loadToken: string) => void;
   isLoading$: Observable<boolean>;
 
-  constructor(loadStrategy = MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT) {
-    if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT)
+  constructor(loadStrategy = MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP) {
+    if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP)
       this._implementation
        = new OnlyOneLoadAtTimeLoadingContext();
     if (loadStrategy === MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP)

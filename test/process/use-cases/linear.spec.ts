@@ -76,11 +76,11 @@ describe('linear', () => {
         .toBe('f--tf--tf--tf', values);
     });
   });
-  it('concurrent', () => {
+  it('concat', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
       scenarios.linear.scenario(
         () => process as any,
         cold,

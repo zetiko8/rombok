@@ -86,7 +86,7 @@ describe('second finishes before first', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
       scenarios.secondFinishesBeforeFirst.scenario(
         () => process as any,
         cold,

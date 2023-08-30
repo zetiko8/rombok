@@ -94,9 +94,9 @@ interface UnboundProcess<T> extends IProcess<T> {
   }
 }
 
-export class ConcurrentProcess<T> implements UnboundProcess<T> {
+export class ConcatMapProcess<T> implements UnboundProcess<T> {
     private _loadContext
-      = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT);
+      = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP);
     public inProgress$
       = this._loadContext.isLoading$
         .pipe(
@@ -305,8 +305,8 @@ export class Process<ReturnType> implements IProcess<ReturnType> {
     ) {
       this._process = (() => {
         switch (options.multipleExecutionsStrategy) {
-        case MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT:
-          return new ConcurrentProcess();
+        case MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP:
+          return new ConcatMapProcess();
         case MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP:
           return new SwitchMapProcess();
         default:

@@ -31,7 +31,7 @@
 //     });
 //   });
 
-//   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT', () => {
+//   describe('MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP', () => {
 //     const createProcess
 //       = () => new Process<any>() as any;
 //     it('--a', () => scenarios['--a']
@@ -103,37 +103,37 @@
 //     it('--exec(--#)', () => scenarios['--exec(--#)']
 //       .behavior.common(createProcess, scheduler));
 //     it('sync((--a)(--b))', () => scenarios['sync((--a)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--#)(--b))', () => scenarios['sync((--#)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--a)(--#))', () => scenarios['sync((--a)(--#))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((-a)(--b))', () => scenarios['sync((-a)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((-#)(--b))', () => scenarios['sync((-#)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--a)(-b))', () => scenarios['sync((--a)(-b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--#)(-b))', () => scenarios['sync((--#)(-b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(--a)-----exec(--b)', () => scenarios['--exec(--a)-----exec(--b)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----a)----exec(--b)', () => scenarios['--exec(----a)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(------a)----exec(--b)', () => scenarios['--exec(------a)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(--#)-----exec(--b)', () => scenarios['--exec(--#)-----exec(--b)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----#)----exec(--b)', () => scenarios['--exec(----#)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(------#)----exec(--b)', () => scenarios['--exec(------#)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(--a)-----exec(--#)', () => scenarios['--exec(--a)-----exec(--#)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----a)----exec(--#)', () => scenarios['--exec(----a)----exec(--#)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(------a)----exec(--#)', () => scenarios['--exec(------a)----exec(--#)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //   });
 //   describe('MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP', () => {
 //     const createProcess
@@ -152,17 +152,17 @@
 //     it('sync((--a)(--b))', () => scenarios['sync((--a)(--b))']
 //       .behavior.switch(createProcess, scheduler));
 //     it('sync((--#)(--b))', () => scenarios['sync((--#)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--a)(--#))', () => scenarios['sync((--a)(--#))']
 //       .behavior.switch(createProcess, scheduler));
 //     it('sync((-a)(--b))', () => scenarios['sync((-a)(--b))']
 //       .behavior.switch(createProcess, scheduler));
 //     it('sync((-#)(--b))', () => scenarios['sync((-#)(--b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('sync((--a)(-b))', () => scenarios['sync((--a)(-b))']
 //       .behavior.switch(createProcess, scheduler));
 //     it('sync((--#)(-b))', () => scenarios['sync((--#)(-b))']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(--a)-----exec(--b)', () => scenarios['--exec(--a)-----exec(--b)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----a)----exec(--b)', () => scenarios['--exec(----a)----exec(--b)']
@@ -172,9 +172,9 @@
 //     it('--exec(--#)-----exec(--b)', () => scenarios['--exec(--#)-----exec(--b)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----#)----exec(--b)', () => scenarios['--exec(----#)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(------#)----exec(--b)', () => scenarios['--exec(------#)----exec(--b)']
-//       .behavior.concurrent(createProcess, scheduler));
+//       .behavior.concat(createProcess, scheduler));
 //     it('--exec(--a)-----exec(--#)', () => scenarios['--exec(--a)-----exec(--#)']
 //       .behavior.common(createProcess, scheduler));
 //     it('--exec(----a)----exec(--#)', () => scenarios['--exec(----a)----exec(--#)']

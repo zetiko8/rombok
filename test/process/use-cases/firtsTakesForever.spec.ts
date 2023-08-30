@@ -55,7 +55,7 @@ const scenarios = {
 };
 
 /**
- * The point of this test is to test the concurrent mode,
+ * The point of this test is to test the concat mode,
  * While the firs takes forever, the second and third request should
  * wait for it to finish before starting
  */
@@ -90,11 +90,11 @@ describe('first takes for ever', () => {
         .toBe('f--t-------------f', values);
     });
   });
-  it('concurrent', () => {
+  it('concat', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
       scenarios.linear.scenario(
         () => process as any,
         cold,

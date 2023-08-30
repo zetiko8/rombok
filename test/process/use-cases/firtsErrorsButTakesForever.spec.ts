@@ -96,7 +96,7 @@ describe('linear first errors and takes for ever', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
             = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCURRENT });
+              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
       const td = scenarios.linear.scenario(
         () => process as any,
         cold,
