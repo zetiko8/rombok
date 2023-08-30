@@ -11,7 +11,7 @@ import { map } from 'rxjs';
  * instantly - make sure that the interfaces are in correct state
  * // TODO - also test for errors
  */
-describe.only('first and second fire at same time on the start and take no time', () => {
+describe('first and second fire at same time on the start and take no time', () => {
   let scheduler: TestScheduler;
   let sbx: SinonSandbox;
   beforeEach(() => {
@@ -90,7 +90,7 @@ describe.only('first and second fire at same time on the start and take no time'
         assertCallCount(processFn, 3));
     });
   });
-  it.only('switch', () => {
+  it('switch', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
        = new Process<string>({
