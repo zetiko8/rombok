@@ -1,71 +1,75 @@
 import { TestScheduler } from 'rxjs/testing';
-import { from, Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
-import { delay, filter, map, concatMap, tap, catchError, finalize } from 'rxjs/operators';
+import { Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
+import { tap, catchError, finalize } from 'rxjs/operators';
 import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
-chai.use(sinonChai);
+import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 const expect = chai.expect;
+
+export type TestScenarioReturn = [
+  TestError,
+  SinonSpy<[value: string], Observable<string>>,
+  Observable<void>,
+]
 
 export const logger = {
   logLevel: 0,
   debug (...args: unknown[]): void {
+    // eslint-disable-next-line no-console
     if (this.logLevel > 3) console.log(...args);
   },
   log (...args: unknown[]): void {
+    // eslint-disable-next-line no-console
     if (this.logLevel > 2) console.log(...args);
   },
   warn (...args: unknown[]): void {
+    // eslint-disable-next-line no-console
     if (this.logLevel > 1) console.log(...args);
   },
   error (...args: unknown[]): void {
+    // eslint-disable-next-line no-console
     if (this.logLevel > 0) console.log(...args);
   },
 };
 
-export interface TResource {
-  id: number,
-  text: string,
-}
-
-export interface TLoadArgs {
-  textContains: string,
-}
-
-export const GLOBAL = {
-  sideEffect0Count: 0,
-  sideEffect1Count: 0,
-  sideEffect2Count: 0,
-  reset: () => {
-    GLOBAL.sideEffect0Count = 0;
-    GLOBAL.sideEffect1Count = 0;
-    GLOBAL.sideEffect2Count = 0;
-  },
+export const values = {
+  t: true, f: false, a: 'a', b: 'b', c: 'c', n: null, v: 'v',
+  w: 'w',
+  o: 'o', p: 'p', r: 'r', s: 's', u: 'u',
 };
 
-export function getSpyWrapper(sinon: SinonSandbox): {
-    fn: (args: TLoadArgs) => Observable<any>,
-    setFn: (fn: (args: TLoadArgs) => Observable<any>) => void,
-    spy: SinonSpy,
-  } {
-  let fn: (args: TLoadArgs) => Observable<any>;
-  const setFn = (fnn: (args: TLoadArgs) => Observable<any>) => {
-    fn = fnn;
-  };
+export type ColdCreator = <T = string>(marbles: string, values?: {
+  [marble: string]: T;
+} | undefined, error?: unknown) => ColdObservable<T>;
 
-  const _fn = (args: TLoadArgs) => {
-    return fn(args);
+export function spy<T>(
+  sinon: SinonSandbox,
+  fn: T,
+): {
+  spy: T extends (...args: infer TArgs)
+    => infer TReturnValue ? SinonSpy<TArgs, TReturnValue>
+    : SinonSpy<unknown[], unknown>;
+  fn: T;
+} {
+  const wrapper = {
+    fn,
   };
-  const spy = sinon.spy(_fn);
   return {
-    fn: _fn,
-    setFn,
-    spy,
+    spy: sinon.spy(wrapper, 'fn'),
+    fn: wrapper.fn,
   };
+}
+
+export function assertCallCount (
+  spy: SinonSpy,
+  callCount: number,
+): void {
+  expect(spy.callCount)
+    .to.equal(callCount, 'Expected call count');
 }
 
 function getNumberOfSyncGroupings (
-  expected: any,
+  expected: unknown,
 ) {
 
   const e = expected as { frame: number }[];
@@ -91,6 +95,7 @@ export function prepareTestScheduler (): TestScheduler {
         Object.entries(dictOfSyncGroupings)
           .forEach(([key, val]) => {
             if (val > 1) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               expected.forEach((frameDef: any) => {
                 if (frameDef.frame > Number(key)) {
                   frameDef.frame -= (val + 1);
@@ -158,13 +163,15 @@ function formatEventValue (ev: MarbleDef): string {
 function logDef (def: MarbleDef[]) {
   // let s = '';
   def.forEach(d => {
+    // eslint-disable-next-line no-console
     console.log(`frame: ${d.frame} - ${d.notification.kind}: ${d.notification.error !== undefined ? d.notification.error : d.notification.value}`);
   });
+  // eslint-disable-next-line no-console
   console.log('----------------------');
 }
 
 export const ignoreErrorSub = {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/explicit-module-boundary-types
   error() {},
 };
 
@@ -175,51 +182,32 @@ export class TestError extends Error {
   }
 }
 
-export function after (
-  time: number | Observable<unknown>,
-  fn: () => void,
-): void {
-  if (typeof time === 'number')
-    immediate$().pipe(delay(time)).subscribe(fn);
-  else
-    time.subscribe(fn);
-}
-
-export function myScheduler<T>(pattern: string, resultSet: { [key: string]: T }, interval: number, debug = ''): Observable<T> {
-  return from(pattern).pipe(
-    concatMap(item => of(item).pipe ( delay( interval ) )),
-    filter(char => {
-      const on = char !== '-';
-      if ((debug)) {
-        if (on) console.log(`(${debug}) ${char} `);
-        else console.log(`(${debug}) -`);
-      }
-      return on;
-    }),
-    map(char => resultSet[char]),
-  );
-}
-
 export function log<T>(
   sourceName: string, prop: string | null = null):
 OperatorFunction<T, T> {
   return pipe(
     tap(value => {
       if (prop === null)
+        // eslint-disable-next-line no-console
         console.log(sourceName, value);
       else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const obj = value as { [key: string]: any };
         try {
+          // eslint-disable-next-line no-console
           console.log(sourceName, obj[prop]);
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.log(sourceName, value);
         }
       }
     }),
     catchError(error => {
+      // eslint-disable-next-line no-console
       console.log(sourceName, 'ERROR', error.message);
       return throwError(error);
     }),
+    // eslint-disable-next-line no-console
     finalize(() => console.log(sourceName, 'COMPLETED')),
   );
 }

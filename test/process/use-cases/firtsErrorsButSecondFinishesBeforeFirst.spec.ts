@@ -2,54 +2,9 @@
 import { Process } from '../../../src';
 import { MULTIPLE_EXECUTIONS_STRATEGY } from '../../../src/loading-handling';
 import { TestScheduler } from 'rxjs/testing';
-import * as chai from 'chai';
 import { createSandbox, SinonSandbox } from 'sinon';
-import * as sinonChai from 'sinon-chai';
-import { ignoreErrorSub, prepareTestScheduler, TestError } from '../../test.helpers';
-import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
-import { Observable } from 'rxjs';
-
-chai.use(sinonChai);
-const expect = chai.expect;
-
-const values = {
-  t: true, f: false, a: 'a', b: 'b', c: 'c', n: null, v: 'v',
-  w: 'w',
-  o: 'o', p: 'p', r: 'r', s: 's', u: 'u',
-};
-
-  type ColdCreator = <T = string>(marbles: string, values?: {
-    [marble: string]: T;
-  } | undefined, error?: any) => ColdObservable<T>;
-
-
-const scenario = (
-  process: Process<string>,
-  cold: ColdCreator,
-): [
-      TestError,
-      (value: string) => Observable<string>,
-] => {
-
-  const error = new TestError('test');
-  const processFn = (value: string) => {
-    if (value === 'o')
-      return cold('-------#', {}, error);
-    else
-      return cold('--' + value);
-  };
-  function onWrite (value: string) {
-    process.execute(
-      () => processFn(value))
-      .subscribe(ignoreErrorSub);
-  }
-  // user writes
-  cold('---o').subscribe(onWrite);
-  cold('-------p').subscribe(onWrite);
-  cold('-----------r').subscribe(onWrite);
-
-  return [ error, processFn ];
-};
+import { assertCallCount, ColdCreator, ignoreErrorSub, prepareTestScheduler, spy, TestError, TestScenarioReturn, values } from '../../test.helpers';
+import { map } from 'rxjs';
 
 describe('linear first errors, but second finishes before first', () => {
 
@@ -64,6 +19,35 @@ describe('linear first errors, but second finishes before first', () => {
     sbx.restore();
   });
 
+  const scenario = (
+    process: Process<string>,
+    cold: ColdCreator,
+  ): TestScenarioReturn => {
+
+    const error = new TestError('test');
+    const spyWrapper = spy(sbx, (value: string) => {
+      if (value === 'o')
+        return cold('-------#', {}, error);
+      else
+        return cold('--' + value);
+    });
+    function onWrite (value: string) {
+      process.execute(
+        () => spyWrapper.fn(value))
+        .subscribe(ignoreErrorSub);
+    }
+    // user writes
+    cold('---o').subscribe(onWrite);
+    cold('-------p').subscribe(onWrite);
+    cold('-----------r').subscribe(onWrite);
+
+    const after
+      = cold('-------------------------1')
+        .pipe(map(() => undefined));
+
+    return [ error, spyWrapper.spy, after ];
+  };
+
   it('merge', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
@@ -71,7 +55,7 @@ describe('linear first errors, but second finishes before first', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
        });
-      const [ error, processFn ]
+      const [ error, processFn, after ]
         = scenario(process, cold);
 
       expectObservable(process.success$)
@@ -80,6 +64,8 @@ describe('linear first errors, but second finishes before first', () => {
         .toBe('---n---n-nen-n-', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-f', values);
+      after.subscribe(() =>
+        assertCallCount(processFn, 3));
     });
   });
   it('concat', () => {
@@ -89,7 +75,7 @@ describe('linear first errors, but second finishes before first', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
        });
-      const [ error, processFn ]
+      const [ error, processFn, after ]
         = scenario(process, cold);
 
       expectObservable(process.success$)
@@ -98,6 +84,8 @@ describe('linear first errors, but second finishes before first', () => {
         .toBe('---n------en-nn-n', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t------ft-ft-f', values);
+      after.subscribe(() =>
+        assertCallCount(processFn, 3));
     });
   });
   it('switch', () => {
@@ -107,7 +95,7 @@ describe('linear first errors, but second finishes before first', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
        });
-      const [ error, processFn ]
+      const [ error, processFn, after ]
         = scenario(process, cold);
 
       expectObservable(process.success$)
@@ -116,6 +104,8 @@ describe('linear first errors, but second finishes before first', () => {
         .toBe('---n---n-nen-n-', { ...values, e: error });
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
+      after.subscribe(() =>
+        assertCallCount(processFn, 3));
     });
   });
 });
