@@ -23,37 +23,37 @@ const values = {
   } | undefined, error?: any) => ColdObservable<T>;
 
 
-const scenarios = {
-  linear: {
-    scenario: (
-      getProcess: <T>() => Process<T>,
-      cold: ColdCreator,
-    ): [
-          Process<unknown>,
-          TestError,
-        //   Observable<unknown>
-        ] => {
+const scenario = (
+  process: Process<string>,
+  cold: ColdCreator,
+): [
+  TestError,
+  (value: string) => Observable<string>,
+] => {
 
-      const p = getProcess();
-      const error = new TestError('test');
-      function onWrite (value: any) {
-        p.execute(
-          () => {
-            if (value === 'p')
-              return cold('--#', {}, error);
-            else
-              return cold('--' + value);
-          },
-        ).subscribe(ignoreErrorSub);
-      }
-      // user writes
-      cold('---o').subscribe(onWrite);
-      cold('-------p').subscribe(onWrite);
-      cold('-----------r').subscribe(onWrite);
+  const error = new TestError('test');
+  const processFn = (value: string) => {
+    if (value === 'p')
+      return cold('--#', {}, error);
+    else
+      return cold('--' + value);
+  };
+  function onWrite (value: any) {
+    process.execute(
+      () => {
+        if (value === 'p')
+          return cold('--#', {}, error);
+        else
+          return cold('--' + value);
+      },
+    ).subscribe(ignoreErrorSub);
+  }
+  // user writes
+  cold('---o').subscribe(onWrite);
+  cold('-------p').subscribe(onWrite);
+  cold('-----------r').subscribe(onWrite);
 
-      return [ p, error ];
-    },
-  },
+  return [ error, processFn ];
 };
 
 describe('linear second errors', () => {
@@ -70,13 +70,12 @@ describe('linear second errors', () => {
   it('merge', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP });
-      const td = scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
-      const error = td[1];
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('-----o-------r');
@@ -89,13 +88,12 @@ describe('linear second errors', () => {
   it('concat', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
-      const td = scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
-      const error = td[1];
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('-----o-------r');
@@ -108,13 +106,12 @@ describe('linear second errors', () => {
   it('switch', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP });
-      const td = scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
-      const error = td[1];
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('-----o-------r');

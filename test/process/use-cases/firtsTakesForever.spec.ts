@@ -7,6 +7,7 @@ import { createSandbox, SinonSandbox } from 'sinon';
 import * as sinonChai from 'sinon-chai';
 import { ignoreErrorSub, prepareTestScheduler, TestError } from '../../test.helpers';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
+import { Observable } from 'rxjs';
 
 chai.use(sinonChai);
 
@@ -21,37 +22,37 @@ const values = {
   } | undefined, error?: any) => ColdObservable<T>;
 
 
-const scenarios = {
-  linear: {
-    scenario: (
-      getProcess: <T>() => Process<T>,
-      cold: ColdCreator,
-    ): [
-          Process<unknown>,
-          TestError,
-        //   Observable<unknown>
-        ] => {
+const scenario = (
+  process: Process<string>,
+  cold: ColdCreator,
+): [
+  TestError,
+  (value: string) => Observable<string>,
+] => {
 
-      const p = getProcess();
-      const error = new TestError('test');
-      function onWrite (value: any) {
-        p.execute(
-          () => {
-            if (value === 'o')
-              return cold('--------------' + value);
-            else
-              return cold('--' + value);
-          },
-        ).subscribe(ignoreErrorSub);
-      }
-      // user writes
-      cold('---o').subscribe(onWrite);
-      cold('-------p').subscribe(onWrite);
-      cold('-----------r').subscribe(onWrite);
+  const error = new TestError('test');
+  const processFn = (value: string) => {
+    if (value === 'o')
+      return cold('--------------' + value);
+    else
+      return cold('--' + value);
+  };
+  function onWrite (value: any) {
+    process.execute(
+      () => {
+        if (value === 'o')
+          return cold('--------------' + value);
+        else
+          return cold('--' + value);
+      },
+    ).subscribe(ignoreErrorSub);
+  }
+  // user writes
+  cold('---o').subscribe(onWrite);
+  cold('-------p').subscribe(onWrite);
+  cold('-----------r').subscribe(onWrite);
 
-      return [ p, error ];
-    },
-  },
+  return [ error, processFn ];
 };
 
 /**
@@ -75,12 +76,12 @@ describe('first takes for ever', () => {
   it('merge', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP });
-      scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('---------p---r---o');
@@ -93,12 +94,12 @@ describe('first takes for ever', () => {
   it('concat', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP });
-      scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('-----------------o--p--r)');
@@ -111,13 +112,12 @@ describe('first takes for ever', () => {
   it('switch', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
-            = new Process(
-              { multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP });
-      const td = scenarios.linear.scenario(
-        () => process as any,
-        cold,
-      );
-      const error = td[1];
+       = new Process<string>({
+         multipleExecutionsStrategy:
+          MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
+       });
+      const [ error, processFn ]
+        = scenario(process, cold);
 
       expectObservable(process.success$)
         .toBe('---------p---r');
