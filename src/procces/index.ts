@@ -2,7 +2,6 @@ import {
   asyncScheduler,
   Observable,
   ReplaySubject,
-  BehaviorSubject,
   throwError,
   Subject,
   of,
@@ -28,8 +27,10 @@ import {
 import { randomString } from '../helpers';
 
 class Pipeline<T> {
-  private readonly line: { execute$: Subject<0|1>, result$: Observable<T> }[] = [];
-  private readonly ready$ = new BehaviorSubject<boolean>(false);
+  private readonly line: {
+    execute$: Subject<0|1>,
+    result$: Observable<T>
+  }[] = [];
 
   add (load$: Observable<T>): Observable<T> {
     const execute$ = new ReplaySubject<0|1>(1);
