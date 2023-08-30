@@ -1,6 +1,6 @@
 import { TestScheduler } from 'rxjs/testing';
 import { Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
-import { tap, catchError, finalize } from 'rxjs/operators';
+import { tap, catchError, finalize, map } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
@@ -180,6 +180,21 @@ export class TestError extends Error {
   constructor (message: string) {
     super(message);
   }
+}
+
+/**
+ * Creates an observable that will fire
+ * after all the other observables are finished
+ */
+export function createAfter$ (
+  cold: ColdCreator,
+) {
+  /**
+   * The implementation is dumb
+   *  - just make an observable that fires really late
+   */
+  return cold('-------------------------1')
+    .pipe(map(() => undefined));
 }
 
 export function log<T>(
