@@ -9,10 +9,10 @@ import { Process } from 'rombok';
 
 const myProcess = new Process();
 
-$button.onclick = () => myProcess.execute(() => loadData());
+$button.onclick = () => myProcess.execute(() => loadData()).subscribe();
 
-myProcess.data$.subscribe(data => /** display data */);
-myProcess.inProcess$.subscribe(isLoading => /** show/hide loader */);
+myProcess.success$.subscribe(data => /** display data */);
+myProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
 myProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
@@ -30,21 +30,21 @@ There are many solutions already on the web but they often neglect the repeatabi
 The normal code to achieve this is something like:
 
 ```typescript
-const inProcess$ = new BehaviorSubject(false);
+const inProgress$ = new BehaviorSubject(false);
 
 const tableData$ = pagingData$
     .pipe(
-        tap(() => inProcess$.next(true)),
+        tap(() => inProgress$.next(true)),
         switchMap((pagingData) => callApi(pagingData)),
         catchError(() => {
-            inProcess$.next(false);
+            inProgress$.next(false);
             return EMPTY;
         }),
-        tap(() => inProcess$.next(false)),
+        tap(() => inProgress$.next(false)),
     );
 
 tableData$.subscribe(data => /** display data */);
-inProcess$.subscribe(isLoading => /** show/hide loader */);
+inProgress$.subscribe(isLoading => /** show/hide loader */);
 ```
 One can see, that the only actual piece of business logic is the callApi part, everything else is just boilerplate code that needs to be repeated any time we have a stream of resource being loaded.
 
@@ -57,7 +57,7 @@ pagingData$.subscribe(
     pagingData => tableDataProcess.execute(pagingData).subscribe());
 
 tableDataProcess.success$.subscribe(data => /** display data */);
-tableDataProcess.inProcess$.subscribe(isLoading => /** show/hide loader */);
+tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
 ```
 
 ### Error Handling
@@ -89,7 +89,7 @@ const tableData$ = pagingData$
     );
 
 tableData$.subscribe(data => /** display data */);
-inProcess$.subscribe(errorOrNull => /** show/hide error state */);
+inProgress$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
 With rombok it is shortened to
@@ -109,39 +109,37 @@ The best way to handle errors is the following. Throw error wherever and always 
 That is why the `Process` in rombok separates error handling two two places. One place, has error as the state of application, and such an error can be displayed to the user - this is the `process.error$` stream,
 the second place actually rethrows the error, so that it can be caught in the global scale. This is the subscriber of `process.execute(loadFn).subscribe`.
 
-TODO - angular async pipes
-
 ### All the boiler plate code
 
 ```typescript
 const error$ = new BehaviorSubject(null);
-const inProcess$ = new BehaviorSubject(false);
+const inProgress$ = new BehaviorSubject(false);
 
 const tableData$ = pagingData$
     .pipe(
         tap(() => {
             error$.next(null);
-            inProcess$.next(true);
+            inProgress$.next(true);
         ),
         switchMap((pagingData) => 
             callApi(pagingData)
             .pipe(
                 catchError(error => {
                     error$.next(error);
-                    inProcess$.next(false);
+                    inProgress$.next(false);
                     return EMPTY;
                 }),
             )
         ),
         tap(() => {
             error$.next(null);
-            inProcess$.next(false);
+            inProgress$.next(false);
         ),
     );
 
 tableData$.subscribe(data => /** display data */);
-tableDataProcess.inProcess$.subscribe(isLoading => /** show/hide loader */);
-inProcess$.subscribe(errorOrNull => /** show/hide error state */);
+tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
+inProgress$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
 All this code needs to be repeated so many time in a typical app.
@@ -158,7 +156,7 @@ pagingData$.subscribe(
     */));
 
 tableDataProcess.success$.subscribe(data => /** display data */);
-tableDataProcess.inProcess$.subscribe(isLoading => /** show/hide loader */);
+tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
 tableDataProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
@@ -176,7 +174,7 @@ process.execute(() => fromFetch('https://url')).subscribe({
 }));
 
 process.data$.subscribe(data => /** display data */);
-process.inProcess$.subscribe(isLoading => /** show/hide loader */);
+process.inProgress$.subscribe(isLoading => /** show/hide loader */);
 process.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
@@ -197,28 +195,30 @@ $button2.onclick = () => process.execute('url2').subscribe();
 #### Process options
 ##### MULTIPLE_EXECUTIONS_STRATEGY
 How to deal with multiple calls to execute. See rxjs switchMap, mergeMap, concatMap
-By default: `SWITCH`
+By default: `MERGE_MAP`
 ```typescript
-// by default it uses MULTIPLE_EXECUTIONS_STRATEGY.SWITCH
-// that is the same as using switchMap to handle the calls to process.execute()
-const switchProcess = new Process();
+// by default it uses MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP
+// that is the same as using mergeMap to handle the calls to process.execute()
+const mergeProcess = new Process({ 
+    multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,  
+});
 process.execute(() => delay(200).pipe(mergeMap(() => of(1)))).subscribe();
 process.execute(() => delay(100).pipe(mergeMap(() => of(2)))).subscribe();
 // only the second request will resolve, the total execution time is 200 ms
 
-// MULTIPLE_EXECUTIONS_STRATEGY.MERGE
-// that is the same as using mergeMap to handle the calls to process.execute()
-const mergeProcess = new Process({ 
-    multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY.MERGE,  
+// MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP
+// that is the same as using switchMap to handle the calls to process.execute()
+const switchProcess = new Process({ 
+    multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,  
 });
 process.execute(() => delay(200).pipe(mergeMap(() => of(1)))).subscribe();
 process.execute(() => delay(100).pipe(mergeMap(() => of(2)))).subscribe();
 // first the second request will resolve, than the first, the total execution time is 200 ms
 
-// MULTIPLE_EXECUTIONS_STRATEGY.CONCAT
+// MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP
 // that is the same as using mergeMap to handle the calls to process.execute()
 const mergeProcess = new Process({ 
-    multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT,  
+    multiple_executions_strategy: MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,  
 });
 process.execute(() => delay(200).pipe(mergeMap(() => of(1)))).subscribe();
 process.execute(() => delay(100).pipe(mergeMap(() => of(2)))).subscribe();
@@ -226,9 +226,6 @@ process.execute(() => delay(100).pipe(mergeMap(() => of(2)))).subscribe();
 ```
 
 The same options apply to BoundProcess.
-
-### Resource
-
 
 ## Build
 
