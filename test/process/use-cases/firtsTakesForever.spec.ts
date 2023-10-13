@@ -1,10 +1,34 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
-import { Process } from '../../../src';
-import { MULTIPLE_EXECUTIONS_STRATEGY } from '../../../src/loading-handling';
+import {
+  Process,
+  WrapProcessOperator,
+  wrapConcatProcess,
+  wrapMergeProcess,
+  wrapSwitchProcess,
+  MULTIPLE_EXECUTIONS_STRATEGY,
+} from '../../../src';
 import { TestScheduler } from 'rxjs/testing';
 import { createSandbox, SinonSandbox } from 'sinon';
-import { assertCallCount, ColdCreator, ignoreErrorSub, prepareTestScheduler, spy, TestError, TestScenarioReturn, values } from '../../test.helpers';
-import { map } from 'rxjs';
+import {
+  assertCallCount,
+  ColdCreator,
+  fakeApiCall,
+  ignoreErrorSub,
+  MultipleExecutionsStrategyOperator,
+  prepareTestScheduler,
+  spy,
+  TestError,
+  TestScenarioReturn,
+  values,
+} from '../../test.helpers';
+import {
+  catchError,
+  concatMap,
+  map,
+  mergeMap,
+  switchMap,
+} from 'rxjs/operators';
+import { EMPTY, ReplaySubject, merge } from 'rxjs';
 
 /**
  * The point of this test is to test the concat mode,
@@ -27,31 +51,80 @@ describe('first takes for ever', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
+    wrapProcess: WrapProcessOperator<string, string>,
+    operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
+    const triggers = [
+      cold('---o'),
+      cold('-------p'),
+      cold('-----------r'),
+    ];
     const error = new TestError('test');
-    const spyWrapper = spy(sbx, (value: string) => {
+    const getProccesFn = () => (value: string) => {
       if (value === 'o')
-        return cold('--------------' + value);
+        return fakeApiCall(cold<string>('--------------' + value));
       else
-        return cold('--' + value);
-    });
+        return fakeApiCall(cold<string>('--' + value));
+    };
+    const spyWrapper = spy(sbx, getProccesFn());
     function onWrite (value: string) {
       process.execute(
         () => spyWrapper.fn(value))
         .subscribe(ignoreErrorSub);
     }
 
+    const spyWrapperForWrapProcess
+      = spy(sbx, getProccesFn());
+
+    const spyWrapperForNormalOperator
+      = spy(sbx, getProccesFn());
+
     // user writes
-    cold('---o').subscribe(onWrite);
-    cold('-------p').subscribe(onWrite);
-    cold('-----------r').subscribe(onWrite);
+    triggers.forEach(t => t.subscribe(onWrite));
+
+    const inProgress$ = new ReplaySubject<boolean>(1);
+    const error$ = new ReplaySubject<Error | null>(1);
+    const data$ = merge(...triggers)
+      .pipe(
+        wrapProcess(
+          (arg) => spyWrapperForWrapProcess.fn(arg),
+          { inProgress$, error$ },
+        ),
+      );
+
+    const normalData$ = merge(...triggers)
+      .pipe(
+        operator(
+          (arg) => spyWrapperForNormalOperator
+            .fn(arg)
+            .pipe(
+              catchError(() => EMPTY),
+            ),
+        ),
+      );
 
     const after
     = cold('-------------------------1')
       .pipe(map(() => undefined));
 
-    return [ error, spyWrapper.spy, after ];
+    return {
+      processLegacy: {
+        processFn: spyWrapper.spy,
+      },
+      wrapProcess: {
+        success$: data$,
+        inProgress$,
+        error$,
+        processFn: spyWrapperForWrapProcess.spy,
+      },
+      normalOperator: {
+        processFn: spyWrapperForNormalOperator.spy,
+        success$: normalData$,
+      },
+      error,
+      after,
+    };
   };
 
   it('merge', () => {
@@ -61,8 +134,15 @@ describe('first takes for ever', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
        });
-      const [ error, processFn, after ]
-        = scenario(process, cold);
+      const {
+        processLegacy,
+        wrapProcess,
+        error,
+        after,
+      }
+        = scenario(process, cold, wrapMergeProcess,
+          mergeMap as
+          MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
         .toBe('---------p---r---o');
@@ -71,7 +151,16 @@ describe('first takes for ever', () => {
       expectObservable(process.inProgress$)
         .toBe('f--t-------------f', values);
       after.subscribe(() =>
-        assertCallCount(processFn, 3));
+        assertCallCount(processLegacy.processFn, 3));
+
+      expectObservable(wrapProcess.success$)
+        .toBe('---------p---r---o');
+      expectObservable(wrapProcess.error$)
+        .toBe('n-----------------', { ...values, e: error });
+      expectObservable(wrapProcess.inProgress$)
+        .toBe('f--t-------------f', values);
+      after.subscribe(() =>
+        assertCallCount(wrapProcess.processFn, 3));
     });
   });
   it('concat', () => {
@@ -81,8 +170,15 @@ describe('first takes for ever', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
        });
-      const [ error, processFn, after ]
-        = scenario(process, cold);
+      const {
+        processLegacy,
+        wrapProcess,
+        normalOperator,
+        error,
+        after,
+      }
+        = scenario(process, cold, wrapConcatProcess,
+          concatMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
         .toBe('-----------------o--p--r');
@@ -91,7 +187,19 @@ describe('first takes for ever', () => {
       expectObservable(process.inProgress$)
         .toBe('f--t-------------ft-ft-f', values);
       after.subscribe(() =>
-        assertCallCount(processFn, 3));
+        assertCallCount(processLegacy.processFn, 3));
+
+      expectObservable(normalOperator.success$)
+        .toBe('-----------------o-p-r');
+
+      expectObservable(wrapProcess.success$)
+        .toBe('-----------------o-p-r');
+      expectObservable(wrapProcess.error$)
+        .toBe('n------------------------', { ...values, e: error });
+      expectObservable(wrapProcess.inProgress$)
+        .toBe('f--t-----------------f', values);
+      after.subscribe(() =>
+        assertCallCount(wrapProcess.processFn, 3));
     });
   });
   it('switch', () => {
@@ -101,8 +209,14 @@ describe('first takes for ever', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
        });
-      const [ error, processFn, after ]
-        = scenario(process, cold);
+      const {
+        processLegacy,
+        wrapProcess,
+        error,
+        after,
+      }
+        = scenario(process, cold, wrapSwitchProcess,
+          switchMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
         .toBe('---------p---r');
@@ -111,7 +225,16 @@ describe('first takes for ever', () => {
       expectObservable(process.inProgress$)
         .toBe('f--t-----f-t-f', values);
       after.subscribe(() =>
-        assertCallCount(processFn, 3));
+        assertCallCount(processLegacy.processFn, 3));
+
+      expectObservable(wrapProcess.success$)
+        .toBe('---------p---r');
+      expectObservable(wrapProcess.error$)
+        .toBe('n-------------', { ...values, e: error });
+      expectObservable(wrapProcess.inProgress$)
+        .toBe('f--t-----f-t-f', values);
+      after.subscribe(() =>
+        assertCallCount(wrapProcess.processFn, 3));
     });
   });
 });

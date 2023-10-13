@@ -1,16 +1,49 @@
 import { TestScheduler } from 'rxjs/testing';
 import { Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
-import { tap, catchError, finalize, map } from 'rxjs/operators';
+import { tap, catchError, finalize, map, take } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 const expect = chai.expect;
 
-export type TestScenarioReturn = [
-  TestError,
-  SinonSpy<[value: string], Observable<string>>,
-  Observable<void>,
-]
+export const debugTicks = (
+  cold: ColdCreator,
+  numberOfTicks = 15,
+): void => {
+  let lines = '-';
+  for (let i = 0; i < numberOfTicks; i++) {
+    cold(lines + 't')
+      .subscribe(
+        // eslint-disable-next-line no-console
+        () => console.log('_'),
+      );
+    lines += '-';
+  }
+};
+export interface MultipleExecutionsStrategyOperator<T, R> {
+  (
+    project: (
+      value: T, index: number
+    ) => Observable<R>): OperatorFunction<T, R>
+}
+
+export type TestScenarioReturn = {
+  processLegacy: {
+    processFn: SinonSpy<[value: string], Observable<string>>,
+  },
+  wrapProcess: {
+    processFn: SinonSpy<[value: string], Observable<string>>,
+    success$: Observable<string>,
+    inProgress$: Observable<boolean>,
+    error$: Observable<Error | null>,
+  },
+  normalOperator: {
+    processFn: SinonSpy<[value: string], Observable<string>>,
+    success$: Observable<string>,
+  },
+  error: TestError,
+  after: Observable<void>
+}
 
 export const logger = {
   logLevel: 0,
@@ -41,6 +74,12 @@ export const values = {
 export type ColdCreator = <T = string>(marbles: string, values?: {
   [marble: string]: T;
 } | undefined, error?: unknown) => ColdObservable<T>;
+
+export function fakeApiCall<T> (
+  source$: Observable<T>,
+): Observable<T> {
+  return source$.pipe(take(1));
+}
 
 export function spy<T>(
   sinon: SinonSandbox,
