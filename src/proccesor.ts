@@ -10,11 +10,12 @@ import {
   tap,
 } from 'rxjs/operators';
 import {
-  LoadContext,
-  MULTIPLE_EXECUTIONS_STRATEGY,
+  ConcatLoadContext,
+  MergeLoadContext,
+  SwitchLoadContext,
 } from './loading-handling';
 
-// TODO - unsubscribing, error handling, sharing ?
+// TODO - unsubscribing, error handling, sharing errors
 
 export interface CreateProcessFunction <Argument, ReturnType>{
   (
@@ -67,13 +68,12 @@ export const createMergeProcess
       ): (source$: Observable<Argument>) => Observable<ReturnType> => {
 
         const loadContext
-          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP);
+          = new MergeLoadContext();
 
         inProgress$
         = loadContext.isLoading$
             .pipe(
               debounceTime(0),
-              startWith(false),
               distinctUntilChanged(),
             );
 
@@ -89,21 +89,21 @@ export const createMergeProcess
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
           tap(() => {
-            loadContext.registerLoading('a');
+            loadContext.registerLoading();
             _error$.next(null);
           }),
           mergeMap(arg => {
             return processFunction(arg).pipe(
               catchError(error => {
                 _error$.next(error);
-                loadContext.registerLoadEnd('a');
+                loadContext.registerLoadEnd();
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
             _error$.next(null);
-            loadContext.registerLoadEnd('a');
+            loadContext.registerLoadEnd();
           }),
         );
       };
@@ -137,13 +137,12 @@ export const createConcatProcess
       ): (source$: Observable<Argument>) => Observable<ReturnType> => {
 
         const loadContext
-          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP);
+          = new ConcatLoadContext();
 
         inProgress$
         = loadContext.isLoading$
             .pipe(
               debounceTime(0),
-              startWith(false),
               distinctUntilChanged(),
             );
 
@@ -159,19 +158,19 @@ export const createConcatProcess
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
           concatMap(arg => {
-            loadContext.registerLoading('a');
+            loadContext.registerLoading();
             _error$.next(null);
             return processFunction(arg).pipe(
               catchError(error => {
                 _error$.next(error);
-                loadContext.registerLoadEnd('a');
+                loadContext.registerLoadEnd();
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
             _error$.next(null);
-            loadContext.registerLoadEnd('a');
+            loadContext.registerLoadEnd();
           }),
         );
       };
@@ -205,13 +204,12 @@ export const createSwitchProcess
       ): (source$: Observable<Argument>) => Observable<ReturnType> => {
 
         const loadContext
-          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP);
+          = new SwitchLoadContext();
 
         inProgress$
         = loadContext.isLoading$
             .pipe(
               debounceTime(0),
-              startWith(false),
               distinctUntilChanged(),
             );
 
@@ -227,21 +225,21 @@ export const createSwitchProcess
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
           tap(() => {
-            loadContext.registerLoading('a');
+            loadContext.registerLoading();
             _error$.next(null);
           }),
           switchMap(arg => {
             return processFunction(arg).pipe(
               catchError(error => {
                 _error$.next(error);
-                loadContext.registerLoadEnd('a');
+                loadContext.registerLoadEnd();
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
             _error$.next(null);
-            loadContext.registerLoadEnd('a');
+            loadContext.registerLoadEnd();
           }),
         );
       };

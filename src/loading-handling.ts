@@ -1,4 +1,4 @@
-import { Observable, ReplaySubject } from 'rxjs';
+import { BehaviorSubject, Observable, ReplaySubject } from 'rxjs';
 import { distinctUntilChanged } from 'rxjs/operators';
 
 export enum MULTIPLE_EXECUTIONS_STRATEGY {
@@ -129,4 +129,85 @@ export class LoadContext {
     this.isLoading$ = this._implementation
       .isLoading$.pipe(distinctUntilChanged());
   }
+}
+
+export interface ILoadContext {
+  registerLoading: () => void;
+  registerLoadEnd: () => void;
+  isLoading$: Observable<boolean>;
+}
+
+export class MergeLoadContext implements ILoadContext {
+  private loadPipeCount = 0;
+
+  registerLoading(): void {
+    this.loadPipeCount++;
+    this.setLoadingState();
+  }
+
+  registerLoadEnd(): void {
+    this.loadPipeCount--;
+    this.setLoadingState();
+  }
+
+  private setLoadingState() {
+    this._isLoading$.next(this.isLoading());
+  }
+
+  private isLoading() {
+    return this.loadPipeCount > 0;
+  }
+
+  private _isLoading$ = new BehaviorSubject<boolean>(false);
+  isLoading$ = this._isLoading$.asObservable();
+
+}
+
+export class ConcatLoadContext implements ILoadContext {
+  private pipes: ExecutingPipe[] = [];
+
+  registerLoading(): void {
+    this.pipes.push(new ExecutingPipe());
+    this.setLoadingState();
+  }
+
+  registerLoadEnd(): void {
+    this.pipes[this.pipes.length - 1]?.registerLoadPipeEnd();
+    this.setLoadingState();
+  }
+
+  private setLoadingState() {
+    this._isLoading$.next(this.isLoading());
+  }
+
+  private isLoading() {
+    if (!this.pipes.length) {
+      return false;
+    } else {
+      return !this.pipes[this.pipes.length - 1]?.hasEnded;
+    }
+  }
+
+  private _isLoading$ = new BehaviorSubject<boolean>(false);
+  isLoading$ = this._isLoading$.asObservable();
+
+}
+
+export class SwitchLoadContext implements ILoadContext {
+
+  registerLoading(): void {
+    this.setLoadingState(true);
+  }
+
+  registerLoadEnd(): void {
+    this.setLoadingState(false);
+  }
+
+  private setLoadingState(isLoading: boolean) {
+    this._isLoading$.next(isLoading);
+  }
+
+  private _isLoading$ = new BehaviorSubject<boolean>(false);
+  isLoading$ = this._isLoading$.asObservable();
+
 }

@@ -4,7 +4,7 @@ import { tap, catchError, finalize, map, take } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
-import { CreateProcessFunction } from '../src/index';
+import { CreateProcessFunction, Process } from '../src/index';
 const expect = chai.expect;
 
 export interface ProcessorTestReturns {
@@ -40,6 +40,29 @@ export const getProcessorTestReturns = (
   };
 };
 
+export const getProcessTestReturns = (
+  sbx: SinonSandbox,
+  process: Process<string>,
+  getProcessFn: () => (value: string) => Observable<string>,
+  triggers: Observable<string>[],
+): {
+  processFn: SinonSpy<[value: string], Observable<string>>
+} => {
+  const spyWrapper = spy(sbx, getProcessFn());
+  function onWrite (value: string) {
+    process.execute(
+      () => spyWrapper.fn(value))
+      .subscribe(ignoreErrorSub);
+  }
+
+  // user writes
+  triggers.forEach(t => t.subscribe(onWrite));
+
+  return {
+    processFn: spyWrapper.spy,
+  };
+};
+
 export const debugTicks = (
   cold: ColdCreator,
   numberOfTicks = 15,
@@ -49,7 +72,7 @@ export const debugTicks = (
     cold(lines + 't')
       .subscribe(
         // eslint-disable-next-line no-console
-        () => console.log('_'),
+        () => console.log('_____'),
       );
     lines += '-';
   }
@@ -194,29 +217,68 @@ interface MarbleDef {
   notification: { kind: 'N'|'C'|'E', value: unknown, error: Error | undefined }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function drawMarbleFromDefs (def: MarbleDef[]) {
   logDef(def);
   let expectedMarble = '.';
   let expectedFrame = 0;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  def.forEach((ev) => {
+  let isDrawingGroup = false;
+  def.forEach((ev, index) => {
+    let addOpeningParenthesis = false;
+    let addClosingParenthesis = false;
+    const next = (def.length - 1) === index ? null : def[index + 1];
+    if (next === null && isDrawingGroup)
+      addClosingParenthesis = true;
+
+    if (
+      !isDrawingGroup
+      && next !== null
+      && next.frame === ev.frame
+    ) {
+      isDrawingGroup = true;
+      addOpeningParenthesis = true;
+    }
+
+    if (
+      next !== null
+      && next.frame !== ev.frame
+    ) {
+      if (isDrawingGroup) addClosingParenthesis = true;
+      isDrawingGroup = false;
+    }
+
     if (ev.frame === 0) {
-      expectedMarble = formatEventValue(ev);
+      if (isDrawingGroup || addClosingParenthesis) {
+        if (addOpeningParenthesis) {
+          expectedMarble = '(';
+        }
+        expectedMarble += formatEventValue(ev);
+      }
+      else {
+        expectedMarble = formatEventValue(ev);
+      }
     }
     else {
-      if (ev.frame > expectedFrame) Array.from(new Array(ev.frame - (expectedFrame + 1))).forEach(() => expectedMarble += '.');
+      if (ev.frame > expectedFrame) {
+        Array.from(
+          new Array(ev.frame - (expectedFrame + 1)),
+        ).forEach(() => expectedMarble += '.');
+      }
+      if (addOpeningParenthesis) expectedMarble += '(';
       expectedMarble += formatEventValue(ev);
     }
     expectedFrame = ev.frame;
 
+    if (addClosingParenthesis) expectedMarble += ')';
+
   });
+
   return expectedMarble;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function formatEventValue (ev: MarbleDef): string {
   if (ev.notification.value !== undefined) {
+    if (ev.notification.value === true) return 't';
+    if (ev.notification.value === false) return 'f';
     if (ev.notification.value === null) return '_';
     if (ev.notification.value instanceof Error) return '€';
     return ev.notification.value as string;
@@ -227,7 +289,6 @@ function formatEventValue (ev: MarbleDef): string {
   return 'What is this is should not happen';
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function logDef (def: MarbleDef[]) {
   // let s = '';
   def.forEach(d => {
@@ -256,7 +317,7 @@ export class TestError extends Error {
  */
 export function createAfter$ (
   cold: ColdCreator,
-) {
+): Observable<undefined> {
   /**
    * The implementation is dumb
    *  - just make an observable that fires really late

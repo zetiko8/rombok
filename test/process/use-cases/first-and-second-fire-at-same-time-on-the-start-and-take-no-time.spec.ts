@@ -141,7 +141,7 @@ describe('first and second fire at same time on the start and take no time', () 
       expectObservable(wrapProcess.error$)
         .toBe('n------------', { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('(ftf)----------(tf)', values);
+        .toBe('(tf)----------(tf)', values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });
@@ -181,7 +181,7 @@ describe('first and second fire at same time on the start and take no time', () 
       expectObservable(wrapProcess.error$)
         .toBe('n------------', { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('(ftf)----------(tf)', values);
+        .toBe('(tf)----------(tf)', values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });
@@ -217,7 +217,7 @@ describe('first and second fire at same time on the start and take no time', () 
       expectObservable(wrapProcess.error$)
         .toBe('n------------', { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('(ftf)----------(tf)', values);
+        .toBe('(tf)----------(tf)', values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });
