@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
   Process,
-  WrapProcessOperator,
-  wrapConcatProcess,
-  wrapMergeProcess,
-  wrapSwitchProcess,
+  CreateProcessFunction,
+  createConcatProcess,
+  createMergeProcess,
+  createSwitchProcess,
   MULTIPLE_EXECUTIONS_STRATEGY,
 } from '../../../src';
 import { TestScheduler } from 'rxjs/testing';
@@ -14,6 +14,7 @@ import {
   ColdCreator,
   fakeApiCall,
   ignoreErrorSub,
+  getProcessorTestReturns,
   MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
   spy,
@@ -28,7 +29,7 @@ import {
   mergeMap,
   switchMap,
 } from 'rxjs/operators';
-import { EMPTY, ReplaySubject, merge } from 'rxjs';
+import { EMPTY,  merge } from 'rxjs';
 
 /**
  * The point of this test is to test the concat mode,
@@ -51,7 +52,7 @@ describe('first takes for ever', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
-    wrapProcess: WrapProcessOperator<string, string>,
+    createProcessFunction: CreateProcessFunction<string, string>,
     operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
@@ -74,24 +75,11 @@ describe('first takes for ever', () => {
         .subscribe(ignoreErrorSub);
     }
 
-    const spyWrapperForWrapProcess
-      = spy(sbx, getProccesFn());
-
     const spyWrapperForNormalOperator
       = spy(sbx, getProccesFn());
 
     // user writes
     triggers.forEach(t => t.subscribe(onWrite));
-
-    const inProgress$ = new ReplaySubject<boolean>(1);
-    const error$ = new ReplaySubject<Error | null>(1);
-    const data$ = merge(...triggers)
-      .pipe(
-        wrapProcess(
-          (arg) => spyWrapperForWrapProcess.fn(arg),
-          { inProgress$, error$ },
-        ),
-      );
 
     const normalData$ = merge(...triggers)
       .pipe(
@@ -112,12 +100,12 @@ describe('first takes for ever', () => {
       processLegacy: {
         processFn: spyWrapper.spy,
       },
-      wrapProcess: {
-        success$: data$,
-        inProgress$,
-        error$,
-        processFn: spyWrapperForWrapProcess.spy,
-      },
+      wrapProcess: getProcessorTestReturns(
+        sbx,
+        createProcessFunction,
+        getProccesFn,
+        triggers,
+      ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,
         success$: normalData$,
@@ -140,7 +128,7 @@ describe('first takes for ever', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapMergeProcess,
+        = scenario(process, cold, createMergeProcess,
           mergeMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
@@ -177,7 +165,7 @@ describe('first takes for ever', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapConcatProcess,
+        = scenario(process, cold, createConcatProcess,
           concatMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
@@ -215,7 +203,7 @@ describe('first takes for ever', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapSwitchProcess,
+        = scenario(process, cold, createSwitchProcess,
           switchMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)

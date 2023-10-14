@@ -1,4 +1,4 @@
-import { EMPTY, Observable, Subject, SubjectLike } from 'rxjs';
+import { EMPTY, Observable, Subject } from 'rxjs';
 import {
   catchError,
   concatMap,
@@ -16,6 +16,21 @@ import {
 
 // TODO - unsubscribing, error handling, sharing ?
 
+export interface CreateProcessFunction <Argument, ReturnType>{
+  (
+    createFn: (
+      wrap:
+        WrapProcessOperator<
+          Argument,
+          ReturnType>
+      ) => Observable<ReturnType>,
+  ): Processor<ReturnType>;
+}
+
+export interface WrapProcessOptions {
+  terminateOnError?: boolean,
+}
+
 export interface WrapProcessOperator <Argument, ReturnType>{
   (
     processFunction: (
@@ -26,220 +41,216 @@ export interface WrapProcessOperator <Argument, ReturnType>{
     ) => Observable<ReturnType>
 }
 
-export interface WrapProcessOptions {
-  terminateOnError?: boolean;
-  inProgress$?: SubjectLike<boolean>;
-  error$?: SubjectLike<Error | null>;
+export interface Processor<ReturnType> {
+  inProgress$: Observable<boolean>,
+  error$: Observable<Error | null>,
+  data$: Observable<ReturnType>,
 }
 
-interface WrapProcessOptionsFull {
-  terminateOnError: boolean;
-  inProgress$: Subject<boolean>;
-  error$: Subject<Error | null>;
-  loadContext: LoadContext,
-}
-
-const getOptionsFull = (
-  multipleExecutionsStrategy: MULTIPLE_EXECUTIONS_STRATEGY,
-  opts?: WrapProcessOptions,
-): WrapProcessOptionsFull => {
-  return {
-    terminateOnError: opts?.terminateOnError || false ,
-    inProgress$: new Subject<boolean>(),
-    error$: new Subject<Error | null>(),
-    loadContext: new LoadContext(multipleExecutionsStrategy),
-  };
-};
-
-const setError = (
-  options: WrapProcessOptionsFull,
-  error: Error | null,
-) => {
-  options.error$.next(error);
-};
-
-const setInProgress = (
-  options: WrapProcessOptionsFull,
-  inProgress: boolean,
-) => {
-  if (inProgress) {
-    options.loadContext.registerLoading('a');
-  }
-  else {
-    options.loadContext.registerLoadEnd('a');
-  }
-};
-
-const setUpInProgress = (
-  options: WrapProcessOptionsFull,
-  inProgress$: SubjectLike<boolean> | undefined,
-) => {
-  const inProgressSubscription
-  = options.loadContext.isLoading$
-    .pipe(
-      startWith(false),
-      debounceTime(0),
-      distinctUntilChanged(),
-    )
-    .subscribe({
-      next: (value) => {
-        if (inProgress$)
-          inProgress$.next(value);
-      },
-    });
-
-  return inProgressSubscription;
-};
-
-const afterCommon = (
-  options: WrapProcessOptionsFull,
-) => {
-  setInProgress(options, false);
-  setError(options, null);
-};
-
-export const wrapMergeProcess
+export const createMergeProcess
   = <Argument, ReturnType>(
-    processFunction: (arg: Argument) => Observable<ReturnType>,
-    options?: WrapProcessOptions,
-  ): (source$: Observable<Argument>) => Observable<ReturnType> => {
+    createFn: (
+      wrap:
+        WrapProcessOperator<
+          Argument,
+          ReturnType>
+      ) => Observable<ReturnType>,
+  ): Processor<ReturnType> => {
 
-    const opts = getOptionsFull(
-      MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
-      options,
-    );
+    let inProgress$!: Observable<boolean>;
+    let error$!: Observable<Error | null>;
 
-    const inProgressSubscription
-      = setUpInProgress(opts, options?.inProgress$);
+    const wrap
+      = (
+        processFunction: (arg: Argument) => Observable<ReturnType>,
+        options?: WrapProcessOptions,
+      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
 
-    const errorSubscription
-      = opts.error$
-        .pipe(
-          distinctUntilChanged(),
-        )
-        .subscribe({
-          next: (value) => {
-            if (options?.error$)
-              options.error$.next(value);
-          },
-        });
+        const loadContext
+          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP);
 
-    setError(opts, null);
+        inProgress$
+        = loadContext.isLoading$
+            .pipe(
+              debounceTime(0),
+              startWith(false),
+              distinctUntilChanged(),
+            );
 
-    return (
-      source$: Observable<Argument>,
-    ): Observable<ReturnType> => source$.pipe(
-      tap(() => {
-        setInProgress(opts, true);
-        setError(opts, null);
-      }),
-      mergeMap(arg => {
-        return processFunction(arg).pipe(
-          catchError(error => {
-            setError(opts, error);
-            setInProgress(opts, false);
-            return EMPTY;
+        const _error$ = new Subject<Error | null>();
+        error$
+          = _error$
+            .pipe(
+              startWith(null),
+              distinctUntilChanged(),
+            );
+
+        return (
+          source$: Observable<Argument>,
+        ): Observable<ReturnType> => source$.pipe(
+          tap(() => {
+            loadContext.registerLoading('a');
+            _error$.next(null);
+          }),
+          mergeMap(arg => {
+            return processFunction(arg).pipe(
+              catchError(error => {
+                _error$.next(error);
+                loadContext.registerLoadEnd('a');
+                return EMPTY;
+              }),
+            );
+          }),
+          tap(() => {
+            _error$.next(null);
+            loadContext.registerLoadEnd('a');
           }),
         );
-      }),
-      tap(() => {
-        afterCommon(opts);
-      }),
-    );
+      };
+
+    const data$ = createFn(wrap);
+
+    return {
+      data$,
+      error$,
+      inProgress$,
+    };
   };
 
-export function wrapSwitchProcess<Argument, ReturnType>(
-  processFunction: (arg: Argument) => Observable<ReturnType>,
-  options?: WrapProcessOptions,
-): (source$: Observable<Argument>) => Observable<ReturnType> {
+export const createConcatProcess
+  = <Argument, ReturnType>(
+    createFn: (
+      wrap:
+        WrapProcessOperator<
+          Argument,
+          ReturnType>
+      ) => Observable<ReturnType>,
+  ): Processor<ReturnType> => {
 
-  const opts = getOptionsFull(
-    MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
-    options,
-  );
+    let inProgress$!: Observable<boolean>;
+    let error$!: Observable<Error | null>;
 
-  const inProgressSubscription
-  = setUpInProgress(opts, options?.inProgress$);
+    const wrap
+      = (
+        processFunction: (arg: Argument) => Observable<ReturnType>,
+        options?: WrapProcessOptions,
+      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
 
-  const errorSubscription
-    = opts.error$
-      .pipe(
-        distinctUntilChanged(),
-      )
-      .subscribe({
-        next: (value) => {
-          if (options?.error$)
-            options.error$.next(value);
-        },
-      });
+        const loadContext
+          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP);
 
-  setError(opts, null);
+        inProgress$
+        = loadContext.isLoading$
+            .pipe(
+              debounceTime(0),
+              startWith(false),
+              distinctUntilChanged(),
+            );
 
-  return (
-    source$: Observable<Argument>,
-  ): Observable<ReturnType> => source$.pipe(
-    tap(() => {
-      setInProgress(opts, true);
-      setError(opts, null);
-    }),
-    switchMap(arg => {
-      return processFunction(arg).pipe(
-        catchError(error => {
-          setError(opts, error);
-          setInProgress(opts, false);
-          return EMPTY;
-        }),
-      );
-    }),
-    tap(() => {
-      afterCommon(opts);
-    }),
-  );
-}
+        const _error$ = new Subject<Error | null>();
+        error$
+          = _error$
+            .pipe(
+              startWith(null),
+              distinctUntilChanged(),
+            );
 
-export function wrapConcatProcess<Argument, ReturnType>(
-  processFunction: (arg: Argument) => Observable<ReturnType>,
-  options?: WrapProcessOptions,
-): (source$: Observable<Argument>) => Observable<ReturnType> {
+        return (
+          source$: Observable<Argument>,
+        ): Observable<ReturnType> => source$.pipe(
+          concatMap(arg => {
+            loadContext.registerLoading('a');
+            _error$.next(null);
+            return processFunction(arg).pipe(
+              catchError(error => {
+                _error$.next(error);
+                loadContext.registerLoadEnd('a');
+                return EMPTY;
+              }),
+            );
+          }),
+          tap(() => {
+            _error$.next(null);
+            loadContext.registerLoadEnd('a');
+          }),
+        );
+      };
 
-  const opts = getOptionsFull(
-    MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
-    options,
-  );
+    const data$ = createFn(wrap);
 
-  const inProgressSubscription
-  = setUpInProgress(opts, options?.inProgress$);
+    return {
+      data$,
+      error$,
+      inProgress$,
+    };
+  };
 
-  const errorSubscription
-    = opts.error$
-      .pipe(
-        distinctUntilChanged(),
-      )
-      .subscribe({
-        next: (value) => {
-          if (options?.error$)
-            options.error$.next(value);
-        },
-      });
+export const createSwitchProcess
+  = <Argument, ReturnType>(
+    createFn: (
+      wrap:
+        WrapProcessOperator<
+          Argument,
+          ReturnType>
+      ) => Observable<ReturnType>,
+  ): Processor<ReturnType> => {
 
-  setError(opts, null);
+    let inProgress$!: Observable<boolean>;
+    let error$!: Observable<Error | null>;
 
-  return (
-    source$: Observable<Argument>,
-  ): Observable<ReturnType> => source$.pipe(
-    concatMap(arg => {
-      setError(opts, null);
-      setInProgress(opts, true);
-      return processFunction(arg).pipe(
-        catchError(error => {
-          setError(opts, error);
-          setInProgress(opts, false);
-          return EMPTY;
-        }),
-      );
-    }),
-    tap(() => {
-      afterCommon(opts);
-    }),
-  );
-}
+    const wrap
+      = (
+        processFunction: (arg: Argument) => Observable<ReturnType>,
+        options?: WrapProcessOptions,
+      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
+
+        const loadContext
+          = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP);
+
+        inProgress$
+        = loadContext.isLoading$
+            .pipe(
+              debounceTime(0),
+              startWith(false),
+              distinctUntilChanged(),
+            );
+
+        const _error$ = new Subject<Error | null>();
+        error$
+          = _error$
+            .pipe(
+              startWith(null),
+              distinctUntilChanged(),
+            );
+
+        return (
+          source$: Observable<Argument>,
+        ): Observable<ReturnType> => source$.pipe(
+          tap(() => {
+            loadContext.registerLoading('a');
+            _error$.next(null);
+          }),
+          switchMap(arg => {
+            return processFunction(arg).pipe(
+              catchError(error => {
+                _error$.next(error);
+                loadContext.registerLoadEnd('a');
+                return EMPTY;
+              }),
+            );
+          }),
+          tap(() => {
+            _error$.next(null);
+            loadContext.registerLoadEnd('a');
+          }),
+        );
+      };
+
+    const data$ = createFn(wrap);
+
+    return {
+      data$,
+      error$,
+      inProgress$,
+    };
+  };
