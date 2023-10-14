@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
   Process,
-  WrapProcessOperator,
-  wrapConcatProcess,
-  wrapMergeProcess,
-  wrapSwitchProcess,
   MULTIPLE_EXECUTIONS_STRATEGY,
+  CreateProcessFunction,
+  createMergeProcess,
+  createConcatProcess,
+  createSwitchProcess,
 } from '../../../src';
 import { TestScheduler } from 'rxjs/testing';
 import { createSandbox, SinonSandbox } from 'sinon';
@@ -13,6 +13,7 @@ import {
   assertCallCount,
   ColdCreator,
   fakeApiCall,
+  getProcessorTestReturns,
   ignoreErrorSub,
   MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
@@ -28,7 +29,7 @@ import {
   mergeMap,
   switchMap,
 } from 'rxjs/operators';
-import { EMPTY, ReplaySubject, merge } from 'rxjs';
+import { EMPTY, merge } from 'rxjs';
 
 describe('linear', () => {
   let scheduler: TestScheduler;
@@ -45,7 +46,7 @@ describe('linear', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
-    wrapProcess: WrapProcessOperator<string, string>,
+    createProcessFunction: CreateProcessFunction<string, string>,
     operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
@@ -65,24 +66,11 @@ describe('linear', () => {
         .subscribe(ignoreErrorSub);
     }
 
-    const spyWrapperForWrapProcess
-      = spy(sbx, getProccesFn());
-
     const spyWrapperForNormalOperator
       = spy(sbx, getProccesFn());
 
     // user writes
     triggers.forEach(t => t.subscribe(onWrite));
-
-    const inProgress$ = new ReplaySubject<boolean>(1);
-    const error$ = new ReplaySubject<Error | null>(1);
-    const data$ = merge(...triggers)
-      .pipe(
-        wrapProcess(
-          (arg) => spyWrapperForWrapProcess.fn(arg),
-          { inProgress$, error$ },
-        ),
-      );
 
     const normalData$ = merge(...triggers)
       .pipe(
@@ -103,12 +91,12 @@ describe('linear', () => {
       processLegacy: {
         processFn: spyWrapper.spy,
       },
-      wrapProcess: {
-        success$: data$,
-        inProgress$,
-        error$,
-        processFn: spyWrapperForWrapProcess.spy,
-      },
+      wrapProcess: getProcessorTestReturns(
+        sbx,
+        createProcessFunction,
+        getProccesFn,
+        triggers,
+      ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,
         success$: normalData$,
@@ -132,7 +120,7 @@ describe('linear', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapMergeProcess,
+        = scenario(process, cold, createMergeProcess,
           mergeMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
@@ -176,7 +164,7 @@ describe('linear', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapConcatProcess,
+        = scenario(process, cold, createConcatProcess,
             concatMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
@@ -218,7 +206,7 @@ describe('linear', () => {
         error,
         after,
       }
-        = scenario(process, cold, wrapSwitchProcess,
+        = scenario(process, cold, createSwitchProcess,
           switchMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)

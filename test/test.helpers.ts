@@ -1,10 +1,44 @@
 import { TestScheduler } from 'rxjs/testing';
-import { Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
+import { merge, Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
 import { tap, catchError, finalize, map, take } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
+import { CreateProcessFunction } from '../src/index';
 const expect = chai.expect;
+
+export interface ProcessorTestReturns {
+  processFn: SinonSpy<[value: string], Observable<string>>,
+  success$: Observable<string>,
+  inProgress$: Observable<boolean>,
+  error$: Observable<Error | null>,
+}
+
+export const getProcessorTestReturns = (
+  sbx: SinonSandbox,
+  createProcessFunction: CreateProcessFunction<string, string>,
+  getProccesFn: () => (value: string) => Observable<string>,
+  triggers: Observable<string>[],
+): ProcessorTestReturns => {
+  const spyWrapper
+    = spy(sbx, getProccesFn());
+
+  const proccesor = createProcessFunction(
+    wrap => merge(...triggers)
+      .pipe(
+        wrap(
+          (arg) => spyWrapper.fn(arg),
+        ),
+      ),
+  );
+
+  return {
+    success$: proccesor.data$,
+    inProgress$: proccesor.inProgress$,
+    error$: proccesor.error$,
+    processFn: spyWrapper.spy,
+  };
+};
 
 export const debugTicks = (
   cold: ColdCreator,
@@ -31,12 +65,7 @@ export type TestScenarioReturn = {
   processLegacy: {
     processFn: SinonSpy<[value: string], Observable<string>>,
   },
-  wrapProcess: {
-    processFn: SinonSpy<[value: string], Observable<string>>,
-    success$: Observable<string>,
-    inProgress$: Observable<boolean>,
-    error$: Observable<Error | null>,
-  },
+  wrapProcess: ProcessorTestReturns,
   normalOperator: {
     processFn: SinonSpy<[value: string], Observable<string>>,
     success$: Observable<string>,
