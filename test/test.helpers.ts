@@ -112,7 +112,7 @@ export const debugTicks = (
     cold(lines + 't')
       .subscribe(
         // eslint-disable-next-line no-console
-        () => console.log('_____'),
+        () => console.log(i, '_____'),
       );
     lines += '-';
   }
