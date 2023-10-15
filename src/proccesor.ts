@@ -18,7 +18,7 @@ import {
   SwitchLoadContext,
 } from './loading-handling';
 
-// TODO - unsubscribing, error handling, sharing errors
+// TODO - unsubscribing, error handling
 
 export interface CreateProcessFunction <Argument, ReturnType>{
   (
