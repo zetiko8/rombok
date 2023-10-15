@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
   Process,
+  WrapProcessOptions,
   MULTIPLE_EXECUTIONS_STRATEGY,
   createMergeProcess,
   createConcatProcess,
@@ -43,7 +44,8 @@ describe('error sharing', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
-    createProcessFunction: CreateProcessFunction<string, string>,
+    createProcessFunction: CreateProcessFunction,
+    wrapProcessOptions:  WrapProcessOptions,
     operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
@@ -100,6 +102,7 @@ describe('error sharing', () => {
         error,
       }
         = scenario(process, cold, createMergeProcess,
+          { terminateOnError: false },
           mergeMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
@@ -144,6 +147,7 @@ describe('error sharing', () => {
         error,
       }
         = scenario(process, cold, createConcatProcess,
+          { terminateOnError: false },
           concatMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
@@ -188,6 +192,7 @@ describe('error sharing', () => {
         error,
       }
         = scenario(process, cold, createSwitchProcess,
+          { terminateOnError: false },
           switchMap as
             MultipleExecutionsStrategyOperator<string, string>);
 

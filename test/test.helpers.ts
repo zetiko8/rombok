@@ -55,14 +55,14 @@ export interface ProcessorTestReturns {
 
 export const getProcessorTestReturns = (
   sbx: SinonSandbox,
-  createProcessFunction: CreateProcessFunction<string, string>,
+  createProcessFunction: CreateProcessFunction,
   getProccesFn: () => (value: string) => Observable<string>,
   triggers: Observable<string>[],
 ): ProcessorTestReturns => {
   const spyWrapper
     = spy(sbx, getProccesFn());
 
-  const proccesor = createProcessFunction(
+  const proccesor = createProcessFunction<string, string>(
     wrap => merge(...triggers)
       .pipe(
         wrap(

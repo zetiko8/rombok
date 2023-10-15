@@ -2,115 +2,93 @@ import {
   BehaviorSubject,
   EMPTY,
   Observable,
+  SubjectLike,
 } from 'rxjs';
 import {
   catchError,
   concatMap,
-  debounceTime,
   distinctUntilChanged,
   mergeMap,
   switchMap,
   tap,
 } from 'rxjs/operators';
 import {
-  ConcatLoadContext,
+  SwitchConcatLoadContext,
+  ILoadContext,
   MergeLoadContext,
-  SwitchLoadContext,
 } from './loading-handling';
+import {
+  CreateProcessFunction,
+  CreatorCallback,
+  WrapProcessOperator,
+} from './proccesor.types';
 
 // TODO - unsubscribing, error handling
 
-export interface CreateProcessFunction <Argument, ReturnType>{
-  (
-    createFn: (
-      wrap:
-        WrapProcessOperator<
-          Argument,
-          ReturnType>
-      ) => Observable<ReturnType>,
-  ): Processor<ReturnType>;
-}
+const changeBoth = (
+  loadContext: ILoadContext,
+  error$: SubjectLike<Error | null>,
+  inProgress: boolean,
+  error: Error | null,
+): void => {
+  inProgress && loadContext.registerLoading();
+  !inProgress && loadContext.registerLoadEnd();
+  error$.next(error);
+};
 
-export interface WrapProcessOptions {
-  terminateOnError?: boolean,
-}
+const createContext = (
+  loadContext: ILoadContext,
+): {
+  doChange: (inProgress: boolean, error: Error | null) => void;
+  isLoading$: Observable<boolean>;
+  error$: Observable<Error | null>;
+} => {
+  const error$
+    = new BehaviorSubject<Error | null>(null);
+  const doChange
+    = changeBoth.bind(null, loadContext, error$);
 
-export interface WrapProcessOperator <Argument, ReturnType>{
-  (
-    processFunction: (
-      arg: Argument) => Observable<ReturnType>,
-      options?: WrapProcessOptions
-    ): (
-      source$: Observable<Argument>
-    ) => Observable<ReturnType>
-}
+  return {
+    doChange,
+    isLoading$: loadContext.isLoading$,
+    error$: error$.pipe(distinctUntilChanged()),
+  };
+};
 
-export interface Processor<ReturnType> {
-  inProgress$: Observable<boolean>,
-  error$: Observable<Error | null>,
-  data$: Observable<ReturnType>,
-}
-
-export const createMergeProcess
+export const createMergeProcess: CreateProcessFunction
   = <Argument, ReturnType>(
-    createFn: (
-      wrap:
-        WrapProcessOperator<
-          Argument,
-          ReturnType>
-      ) => Observable<ReturnType>,
-  ): Processor<ReturnType> => {
+    creator: CreatorCallback<Argument, ReturnType>,
+  ) => {
 
     let inProgress$!: Observable<boolean>;
     let error$!: Observable<Error | null>;
 
-    const wrap
-      = (
-        processFunction: (arg: Argument) => Observable<ReturnType>,
-        options?: WrapProcessOptions,
-      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
+    const wrap: WrapProcessOperator<Argument, ReturnType>
+      = (processFunction, options) => {
 
-        const loadContext
-          = new MergeLoadContext();
-
-        inProgress$
-        = loadContext.isLoading$
-            .pipe(
-              debounceTime(0),
-              distinctUntilChanged(),
-            );
-
-        const _error$ = new BehaviorSubject<Error | null>(null);
-        error$
-          = _error$
-            .pipe(
-              distinctUntilChanged(),
-            );
+        const context = createContext(new MergeLoadContext());
+        inProgress$ = context.isLoading$;
+        error$ = context.error$;
 
         return (
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
-          tap(() => {
-            loadContext.registerLoading();
-            _error$.next(null);
-          }),
           mergeMap(arg => {
+            context.doChange(true, null);
             return processFunction(arg).pipe(
               catchError(error => {
-                _error$.next(error);
-                loadContext.registerLoadEnd();
+                context.doChange(false, error);
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
-            _error$.next(null);
-            loadContext.registerLoadEnd();
+            context.doChange(false, null);
           }),
         );
       };
 
-    const data$ = createFn(wrap);
+    const data$ = creator(wrap);
 
     return {
       data$,
@@ -119,64 +97,40 @@ export const createMergeProcess
     };
   };
 
-export const createConcatProcess
+export const createConcatProcess: CreateProcessFunction
   = <Argument, ReturnType>(
-    createFn: (
-      wrap:
-        WrapProcessOperator<
-          Argument,
-          ReturnType>
-      ) => Observable<ReturnType>,
-  ): Processor<ReturnType> => {
+    creator: CreatorCallback<Argument, ReturnType>,
+  ) => {
 
     let inProgress$!: Observable<boolean>;
     let error$!: Observable<Error | null>;
 
-    const wrap
-      = (
-        processFunction: (arg: Argument) => Observable<ReturnType>,
-        options?: WrapProcessOptions,
-      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
+    const wrap: WrapProcessOperator<Argument, ReturnType>
+      = (processFunction, options) => {
 
-        const loadContext
-          = new ConcatLoadContext();
-
-        inProgress$
-        = loadContext.isLoading$
-            .pipe(
-              debounceTime(0),
-              distinctUntilChanged(),
-            );
-
-        const _error$ = new BehaviorSubject<Error | null>(null);
-        error$
-              = _error$
-            .pipe(
-              distinctUntilChanged(),
-            );
+        const context = createContext(new SwitchConcatLoadContext());
+        inProgress$ = context.isLoading$;
+        error$ = context.error$;
 
         return (
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
           concatMap(arg => {
-            loadContext.registerLoading();
-            _error$.next(null);
+            context.doChange(true, null);
             return processFunction(arg).pipe(
               catchError(error => {
-                _error$.next(error);
-                loadContext.registerLoadEnd();
+                context.doChange(false, error);
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
-            _error$.next(null);
-            loadContext.registerLoadEnd();
+            context.doChange(false, null);
           }),
         );
       };
 
-    const data$ = createFn(wrap);
+    const data$ = creator(wrap);
 
     return {
       data$,
@@ -185,66 +139,41 @@ export const createConcatProcess
     };
   };
 
-export const createSwitchProcess
+export const createSwitchProcess: CreateProcessFunction
   = <Argument, ReturnType>(
-    createFn: (
-      wrap:
-        WrapProcessOperator<
-          Argument,
-          ReturnType>
-      ) => Observable<ReturnType>,
-  ): Processor<ReturnType> => {
+    creator: CreatorCallback<Argument, ReturnType>,
+  ) => {
 
     let inProgress$!: Observable<boolean>;
     let error$!: Observable<Error | null>;
 
-    const wrap
-      = (
-        processFunction: (arg: Argument) => Observable<ReturnType>,
-        options?: WrapProcessOptions,
-      ): (source$: Observable<Argument>) => Observable<ReturnType> => {
+    const wrap: WrapProcessOperator<Argument, ReturnType>
+      = (processFunction, options) => {
 
-        const loadContext
-          = new SwitchLoadContext();
-
-        inProgress$
-        = loadContext.isLoading$
-            .pipe(
-              debounceTime(0),
-              distinctUntilChanged(),
-            );
-
-        const _error$ = new BehaviorSubject<Error | null>(null);
-        error$
-              = _error$
-            .pipe(
-              distinctUntilChanged(),
-            );
+        // TODO - switch and concat loadContext seem to be interchangeable
+        const context = createContext(new SwitchConcatLoadContext());
+        inProgress$ = context.isLoading$;
+        error$ = context.error$;
 
         return (
           source$: Observable<Argument>,
         ): Observable<ReturnType> => source$.pipe(
-          tap(() => {
-            loadContext.registerLoading();
-            _error$.next(null);
-          }),
           switchMap(arg => {
+            context.doChange(true, null);
             return processFunction(arg).pipe(
               catchError(error => {
-                _error$.next(error);
-                loadContext.registerLoadEnd();
+                context.doChange(false, error);
                 return EMPTY;
               }),
             );
           }),
           tap(() => {
-            _error$.next(null);
-            loadContext.registerLoadEnd();
+            context.doChange(false, null);
           }),
         );
       };
 
-    const data$ = createFn(wrap);
+    const data$ = creator(wrap);
 
     return {
       data$,

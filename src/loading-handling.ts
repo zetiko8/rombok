@@ -1,5 +1,5 @@
 import { BehaviorSubject, Observable, ReplaySubject } from 'rxjs';
-import { distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 export enum MULTIPLE_EXECUTIONS_STRATEGY {
   MERGE_MAP,
@@ -159,41 +159,15 @@ export class MergeLoadContext implements ILoadContext {
   }
 
   private _isLoading$ = new BehaviorSubject<boolean>(false);
-  isLoading$ = this._isLoading$.asObservable();
+  isLoading$ = this._isLoading$
+    .pipe(
+      debounceTime(0),
+      distinctUntilChanged(),
+    );
 
 }
 
-export class ConcatLoadContext implements ILoadContext {
-  private pipes: ExecutingPipe[] = [];
-
-  registerLoading(): void {
-    this.pipes.push(new ExecutingPipe());
-    this.setLoadingState();
-  }
-
-  registerLoadEnd(): void {
-    this.pipes[this.pipes.length - 1]?.registerLoadPipeEnd();
-    this.setLoadingState();
-  }
-
-  private setLoadingState() {
-    this._isLoading$.next(this.isLoading());
-  }
-
-  private isLoading() {
-    if (!this.pipes.length) {
-      return false;
-    } else {
-      return !this.pipes[this.pipes.length - 1]?.hasEnded;
-    }
-  }
-
-  private _isLoading$ = new BehaviorSubject<boolean>(false);
-  isLoading$ = this._isLoading$.asObservable();
-
-}
-
-export class SwitchLoadContext implements ILoadContext {
+export class SwitchConcatLoadContext implements ILoadContext {
 
   registerLoading(): void {
     this.setLoadingState(true);
@@ -208,6 +182,10 @@ export class SwitchLoadContext implements ILoadContext {
   }
 
   private _isLoading$ = new BehaviorSubject<boolean>(false);
-  isLoading$ = this._isLoading$.asObservable();
+  isLoading$ = this._isLoading$
+    .pipe(
+      debounceTime(0),
+      distinctUntilChanged(),
+    );
 
 }

@@ -1,5 +1,6 @@
 import {
   Process,
+  WrapProcessOptions,
   CreateProcessFunction,
   createConcatProcess,
   createMergeProcess,
@@ -50,7 +51,8 @@ describe('first and second fire at same time', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
-    createProcessFunction: CreateProcessFunction<string, string>,
+    createProcessFunction: CreateProcessFunction,
+    wrapProcessOptions:  WrapProcessOptions,
     operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
@@ -126,6 +128,7 @@ describe('first and second fire at same time', () => {
         after,
       }
         = scenario(process, cold, createMergeProcess,
+          { terminateOnError: false },
           mergeMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
@@ -163,6 +166,7 @@ describe('first and second fire at same time', () => {
         after,
       }
         = scenario(process, cold, createConcatProcess,
+          { terminateOnError: false },
           concatMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
@@ -204,6 +208,7 @@ describe('first and second fire at same time', () => {
         after,
       }
         = scenario(process, cold, createSwitchProcess,
+          { terminateOnError: false },
           switchMap as
           MultipleExecutionsStrategyOperator<string, string>);
 

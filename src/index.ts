@@ -3,6 +3,10 @@ export {
   createMergeProcess,
   createConcatProcess,
   createSwitchProcess,
-  CreateProcessFunction,
 } from './proccesor';
+export {
+  CreateProcessFunction,
+  WrapProcessOptions,
+  WrapProcessOperator,
+} from './proccesor.types';
 export { MULTIPLE_EXECUTIONS_STRATEGY } from './loading-handling';

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
   Process,
+  WrapProcessOptions,
   CreateProcessFunction,
   createConcatProcess,
   createMergeProcess,
@@ -45,7 +46,8 @@ describe('linear second errors', () => {
   const scenario = (
     process: Process<string>,
     cold: ColdCreator,
-    createProcessFunction: CreateProcessFunction<string, string>,
+    createProcessFunction: CreateProcessFunction,
+    wrapProcessOptions:  WrapProcessOptions,
     operator: MultipleExecutionsStrategyOperator<string, string>,
   ): TestScenarioReturn => {
 
@@ -123,6 +125,7 @@ describe('linear second errors', () => {
         after,
       }
         = scenario(process, cold, createMergeProcess,
+          { terminateOnError: false },
           mergeMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
@@ -158,6 +161,7 @@ describe('linear second errors', () => {
         after,
       }
         = scenario(process, cold, createConcatProcess,
+          { terminateOnError: false },
           concatMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
@@ -193,6 +197,7 @@ describe('linear second errors', () => {
         after,
       }
         = scenario(process, cold, createSwitchProcess,
+          { terminateOnError: false },
           switchMap as MultipleExecutionsStrategyOperator<string, string>);
 
       expectObservable(process.success$)
