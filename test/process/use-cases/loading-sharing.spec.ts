@@ -5,18 +5,27 @@ import {
   createMergeProcess,
   createConcatProcess,
   createSwitchProcess,
+  CreateProcessFunction,
 } from '../../../src';
 import { TestScheduler } from 'rxjs/testing';
 import { createSandbox, SinonSandbox } from 'sinon';
 import {
+  ColdCreator,
   fakeApiCall,
+  getNormalTestReturns,
   getProcessorTestReturns,
   getProcessTestReturns,
+  MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
+  TestError,
+  TestScenarioReturn,
   values,
 } from '../../test.helpers';
 import {
+  concatMap,
+  map,
   mergeMap,
+  switchMap,
 } from 'rxjs/operators';
 
 describe('loading sharing', () => {
@@ -31,6 +40,50 @@ describe('loading sharing', () => {
     sbx.restore();
   });
 
+  const scenario = (
+    process: Process<string>,
+    cold: ColdCreator,
+    createProcessFunction: CreateProcessFunction<string, string>,
+    operator: MultipleExecutionsStrategyOperator<string, string>,
+  ): TestScenarioReturn => {
+
+    const triggers = [
+      cold<string>('--o'),
+      cold<string>('----------r'),
+    ];
+    const error = new TestError('test');
+    const getProccesFn = () => (value: string) => {
+      return fakeApiCall(cold<string>('---' + value));
+    };
+
+    const after
+    = cold('-------------------------1')
+      .pipe(map(() => undefined));
+
+    return {
+      processLegacy: getProcessTestReturns(
+        sbx,
+        process,
+        getProccesFn,
+        triggers,
+      ),
+      wrapProcess: getProcessorTestReturns(
+        sbx,
+        createProcessFunction,
+        getProccesFn,
+        triggers,
+      ),
+      normalOperator: getNormalTestReturns(
+        sbx,
+        operator,
+        getProccesFn,
+        triggers,
+      ),
+      error,
+      after,
+    };
+  };
+
   it('merge', () => {
     scheduler.run(({ cold, expectObservable }) => {
       const process
@@ -38,27 +91,12 @@ describe('loading sharing', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
        });
-      const getProccesFn = () => (value: string) => {
-        return fakeApiCall(cold<string>('---' + value));
-      };
-
-      const triggers = [
-        cold<string>('--o'),
-        cold<string>('----------r'),
-      ];
-
-      getProcessTestReturns(
-        sbx,
-        process,
-        getProccesFn,
-        triggers,
-      );
-      const wrapProcess = getProcessorTestReturns(
-        sbx,
-        createMergeProcess,
-        getProccesFn,
-        triggers,
-      );
+      const {
+        wrapProcess,
+      }
+        = scenario(process, cold, createMergeProcess,
+          mergeMap as
+            MultipleExecutionsStrategyOperator<string, string>);
 
       const sucessP  = '-----o-------r';
       const loadingP = 'f-t--f----t--f';
@@ -90,28 +128,12 @@ describe('loading sharing', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP,
        });
-
-      const getProccesFn = () => (value: string) => {
-        return fakeApiCall(cold<string>('---' + value));
-      };
-
-      const triggers = [
-        cold<string>('--o'),
-        cold<string>('----------r'),
-      ];
-
-      getProcessTestReturns(
-        sbx,
-        process,
-        getProccesFn,
-        triggers,
-      );
-      const wrapProcess = getProcessorTestReturns(
-        sbx,
-        createConcatProcess,
-        getProccesFn,
-        triggers,
-      );
+      const {
+        wrapProcess,
+      }
+        = scenario(process, cold, createConcatProcess,
+          concatMap as
+            MultipleExecutionsStrategyOperator<string, string>);
 
       const sucessP  = '-----o-------r';
       const loadingP = 'f-t--f----t--f';
@@ -143,27 +165,12 @@ describe('loading sharing', () => {
          multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.SWITCH_MAP,
        });
-      const getProccesFn = () => (value: string) => {
-        return fakeApiCall(cold<string>('---' + value));
-      };
-
-      const triggers = [
-        cold<string>('--o'),
-        cold<string>('----------r'),
-      ];
-
-      getProcessTestReturns(
-        sbx,
-        process,
-        getProccesFn,
-        triggers,
-      );
-      const wrapProcess = getProcessorTestReturns(
-        sbx,
-        createSwitchProcess,
-        getProccesFn,
-        triggers,
-      );
+      const {
+        wrapProcess,
+      }
+        = scenario(process, cold, createSwitchProcess,
+          switchMap as
+            MultipleExecutionsStrategyOperator<string, string>);
 
       const sucessP  = '-----o-------r';
       const loadingP = 'f-t--f----t--f';

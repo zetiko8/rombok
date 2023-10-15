@@ -1,11 +1,51 @@
 import { TestScheduler } from 'rxjs/testing';
-import { merge, Observable, of, OperatorFunction, pipe, throwError } from 'rxjs';
+import {
+  EMPTY,
+  merge,
+  Observable,
+  of,
+  OperatorFunction,
+  pipe,
+  throwError,
+} from 'rxjs';
 import { tap, catchError, finalize, map, take } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 import { CreateProcessFunction, Process } from '../src/index';
 const expect = chai.expect;
+
+export interface NormalTestReturns {
+  processFn: SinonSpy<[value: string], Observable<string>>,
+  success$: Observable<string>,
+}
+
+export const getNormalTestReturns = (
+  sbx: SinonSandbox,
+  operator: MultipleExecutionsStrategyOperator<string, string>,
+  getProccesFn: () => (value: string) => Observable<string>,
+  triggers: Observable<string>[],
+): NormalTestReturns => {
+
+  const spyWrapper
+  = spy(sbx, getProccesFn());
+
+  const normalData$ = merge(...triggers)
+    .pipe(
+      operator(
+        (arg) => spyWrapper
+          .fn(arg)
+          .pipe(
+            catchError(() => EMPTY),
+          ),
+      ),
+    );
+
+  return {
+    processFn: spyWrapper.spy,
+    success$: normalData$,
+  };
+};
 
 export interface ProcessorTestReturns {
   processFn: SinonSpy<[value: string], Observable<string>>,
@@ -89,10 +129,7 @@ export type TestScenarioReturn = {
     processFn: SinonSpy<[value: string], Observable<string>>,
   },
   wrapProcess: ProcessorTestReturns,
-  normalOperator: {
-    processFn: SinonSpy<[value: string], Observable<string>>,
-    success$: Observable<string>,
-  },
+  normalOperator: NormalTestReturns,
   error: TestError,
   after: Observable<void>
 }
