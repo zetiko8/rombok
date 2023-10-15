@@ -12,7 +12,6 @@ import {
   assertCallCount,
   ColdCreator,
   fakeApiCall,
-  ignoreErrorSub,
   getProcessorTestReturns,
   MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
@@ -29,6 +28,7 @@ import {
   switchMap,
 } from 'rxjs/operators';
 import { EMPTY,  merge } from 'rxjs';
+import { ignoreErrorSub } from '@zetiko8/rxjs-testing-helpers';
 
 /**
  * Check what happens if everything happens

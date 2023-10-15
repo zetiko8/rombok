@@ -14,7 +14,6 @@ import {
   ColdCreator,
   fakeApiCall,
   getProcessorTestReturns,
-  ignoreErrorSub,
   MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
   spy,
@@ -30,6 +29,7 @@ import {
   switchMap,
 } from 'rxjs/operators';
 import { EMPTY, merge } from 'rxjs';
+import { ignoreErrorSub } from '@zetiko8/rxjs-testing-helpers';
 
 describe('linear', () => {
   let scheduler: TestScheduler;
