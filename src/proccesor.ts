@@ -1,11 +1,14 @@
-import { EMPTY, Observable, Subject } from 'rxjs';
+import {
+  BehaviorSubject,
+  EMPTY,
+  Observable,
+} from 'rxjs';
 import {
   catchError,
   concatMap,
   debounceTime,
   distinctUntilChanged,
   mergeMap,
-  startWith,
   switchMap,
   tap,
 } from 'rxjs/operators';
@@ -77,11 +80,10 @@ export const createMergeProcess
               distinctUntilChanged(),
             );
 
-        const _error$ = new Subject<Error | null>();
+        const _error$ = new BehaviorSubject<Error | null>(null);
         error$
           = _error$
             .pipe(
-              startWith(null),
               distinctUntilChanged(),
             );
 
@@ -146,11 +148,10 @@ export const createConcatProcess
               distinctUntilChanged(),
             );
 
-        const _error$ = new Subject<Error | null>();
+        const _error$ = new BehaviorSubject<Error | null>(null);
         error$
-          = _error$
+              = _error$
             .pipe(
-              startWith(null),
               distinctUntilChanged(),
             );
 
@@ -213,11 +214,10 @@ export const createSwitchProcess
               distinctUntilChanged(),
             );
 
-        const _error$ = new Subject<Error | null>();
+        const _error$ = new BehaviorSubject<Error | null>(null);
         error$
-          = _error$
+              = _error$
             .pipe(
-              startWith(null),
               distinctUntilChanged(),
             );
 
