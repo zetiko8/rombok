@@ -1,8 +1,35 @@
 # rombok
 
+Rombok is a library that like Lombok in java, offers less verbose solutions for common rxjs frontend use cases.
+
 ## Getting started
 
 `npm i rombok`
+
+```typescript
+import { of, delay, BehaviorSubject } from 'rxjs';
+import { createMergeProcess } from '../../src/index';
+
+const loadTableData
+  = (page: number) => of({ foo: 'bar', page }).pipe(delay(1000));
+
+const paging$ = new BehaviorSubject(1);
+const { data$, inProgress$, error$ }
+      = createMergeProcess<number, { foo: string, page: number }>(
+        wrap => paging$
+          .pipe(
+            wrap(
+              (page) => loadTableData(page),
+              { share: true, terminateOnError: false },
+            ),
+          ));
+
+$nextPageButton.onclick = () => paging$.next(paging$.value + 1);
+
+data$.subscribe(data => {/** display data */});
+inProgress$.subscribe(isLoading => {/** show/hide loader */});
+error$.subscribe(errorOrNull => {/** show/hide error state */});
+```
 
 ```typescript
 import { Process } from 'rombok';
@@ -16,154 +43,88 @@ myProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
 myProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
-## Why
-
-Rombok is a library that like Lombok in java, offers less verbose solutions for common rxjs frontend use cases.
-It focuses on solving three problems, that every responsible frontend developer needs to take into account.
-
-### Loading
-
-An observable stream is most often some async operation. While the async operation is being performed the user needs to be made aware of that via some kind of loading indicator.
-
-There are many solutions already on the web but they often neglect the repeatability of something being loaded (for example when the user is paging a table, the loading indicator needs to appear every time, not just on the first page load)
-
-The normal code to achieve this is something like:
-
-```typescript
-const inProgress$ = new BehaviorSubject(false);
-
-const tableData$ = pagingData$
-    .pipe(
-        tap(() => inProgress$.next(true)),
-        switchMap((pagingData) => callApi(pagingData)),
-        catchError(() => {
-            inProgress$.next(false);
-            return EMPTY;
-        }),
-        tap(() => inProgress$.next(false)),
-    );
-
-tableData$.subscribe(data => /** display data */);
-inProgress$.subscribe(isLoading => /** show/hide loader */);
-```
-One can see, that the only actual piece of business logic is the callApi part, everything else is just boilerplate code that needs to be repeated any time we have a stream of resource being loaded.
-
-With rombok it is shortened to
-```typescript
-const tableDataProcess
-    = new BoundProcess((pagingData) => callApi(pagingData));
-
-pagingData$.subscribe(
-    pagingData => tableDataProcess.execute(pagingData).subscribe());
-
-tableDataProcess.success$.subscribe(data => /** display data */);
-tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
-```
-
-### Error Handling
-
-#### Non terminating streams
-The problem with error handling in rxjs is, that the stream terminates as soon as an error is thrown. This is normally not a desired thing in frontend programming, where there are numerous
-ways to recover from an error and keep the application running.
-There are many, more or less complicated ways to prevent the termination and enable repeatability. Again they include a lot of boilerplate.
-Example:
-
-```typescript
-const error$ = new BehaviorSubject(null);
-
-const tableData$ = pagingData$
-    .pipe(
-        tap(() => error$.next(null)),
-        switchMap((pagingData) => 
-            callApi(pagingData)
-            .pipe(
-                // the catch error needs to be declared in the inner stream,
-                // so that it does not terminate the outer one
-                catchError(error => {
-                    error$.next(error);
-                    return EMPTY;
-                }),
-            )
-        ),
-        tap(() => error$.next(null)),
-    );
-
-tableData$.subscribe(data => /** display data */);
-inProgress$.subscribe(errorOrNull => /** show/hide error state */);
-```
-
-With rombok it is shortened to
-```typescript
-const tableDataProcess
-    = new BoundProcess((pagingData) => callApi(pagingData));
-
-pagingData$.subscribe(
-    pagingData => tableDataProcess.execute(pagingData).subscribe());
-
-tableDataProcess.success$.subscribe(data => /** display data */);
-tableDataProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
-```
-
-#### Error reporting
-The best way to handle errors is the following. Throw error wherever and always bubble it to the surface. The error needs to be handled in two ways. 1. Presentational - display the error to the user (handle it in the specific context i an way that is meaningful to the error), and 2. Reporting - catch the error globally and notify the error reporter.
-That is why the `Process` in rombok separates error handling two two places. One place, has error as the state of application, and such an error can be displayed to the user - this is the `process.error$` stream,
-the second place actually rethrows the error, so that it can be caught in the global scale. This is the subscriber of `process.execute(loadFn).subscribe`.
-
-### All the boiler plate code
-
-```typescript
-const error$ = new BehaviorSubject(null);
-const inProgress$ = new BehaviorSubject(false);
-
-const tableData$ = pagingData$
-    .pipe(
-        tap(() => {
-            error$.next(null);
-            inProgress$.next(true);
-        ),
-        switchMap((pagingData) => 
-            callApi(pagingData)
-            .pipe(
-                catchError(error => {
-                    error$.next(error);
-                    inProgress$.next(false);
-                    return EMPTY;
-                }),
-            )
-        ),
-        tap(() => {
-            error$.next(null);
-            inProgress$.next(false);
-        ),
-    );
-
-tableData$.subscribe(data => /** display data */);
-tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
-inProgress$.subscribe(errorOrNull => /** show/hide error state */);
-```
-
-All this code needs to be repeated so many time in a typical app.
-Every time it's repeated it can be repeated wrongly.
-
-In rombok
-```typescript
-const tableDataProcess
-    = new BoundProcess((pagingData) => callApi(pagingData));
-
-pagingData$.subscribe(
-    pagingData => tableDataProcess.execute(pagingData).subscribe(/**
-        the error here is re-thrown if not handled
-    */));
-
-tableDataProcess.success$.subscribe(data => /** display data */);
-tableDataProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
-tableDataProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
-```
-
 ## Api Reference
 
+### wrapProcess
+`CreateProcessFunction`s provide a wrapper around async processes for accessing their data$, inProgress$ and error$ state.
+
+```typescript
+import { of } from 'rxjs';
+import { createMergeProcess } from '../../src/index';
+
+const { 
+    data$, // the resolved value
+    inProgress$, // true / false
+    error$  // Error / null
+}
+        // generic <Argument> and <ReturnType> need to be provided
+      = createMergeProcess<string, string>(
+        wrap => trigger$ // trigger (Observable<Argument>)
+          .pipe(
+            wrap(
+              // a function that returns an Observable<ReturnType>
+              (arg) => of('foo'),
+              // options <WrapProcessOptions>
+              { 
+                // share results to different subscribers
+                // see rxjs multicasting
+                // by default - false
+                share: false,
+                // invoke subscribers.error function
+                // when an error is emitted and terminate the stream.
+                // If set to false, the error will be swallowed and
+                // the stream will keep emitting on trigger$.next
+                // by default - false
+                terminateOnError: true,
+                // throw any error emitted to global scope
+                // (for use in case of global error handling)
+                throwErrorToGlobal: false,
+              },
+            ),
+          ));
+```
+#### Handle multiple request at the same time
+
+Use `createMergeProcess` for handling concurrent requests like `mergeMap` handles them.
+Use `createConcatProcess`, `createSwitchProcess` for handling concurrent requests like `concatMap`, `switchMap` accordingly.
+
+```typescript
+import { of } from 'rxjs';
+import { createMergeProcess, createConcatProcess, createSwitchProcess  } from '../../src/index';
+
+const mergeProcess
+      = createMergeProcess<string, string>(
+        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
+const concatProcess
+      = createConcatProcess<string, string>(
+        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
+const switchProcess
+      = createSwitchProcess<string, string>(
+        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
+```
+
+#### WrapProcessOptions
+
+```typescript
+{ 
+  // share results to different subscribers
+  // see rxjs multicasting
+  // by default - false
+  share: false,
+  // invoke subscribers.error function
+  // when an error is emitted and terminate the stream.
+  // If set to false, the error will be swallowed and
+  // the stream will keep emitting on trigger$.next
+  // by default - false
+  terminateOnError: true,
+  // throw any error emitted to global scope
+  // (for use in case of global error handling)
+  throwErrorToGlobal: false,
+}
+```
+
 ### Process
-`Process` is the main building block of rombok. It's a stream holder, that includes data$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
+`Process` is a stream holder, that includes success$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
 ```typescript
 const process = new Process();
@@ -173,7 +134,7 @@ process.execute(() => fromFetch('https://url')).subscribe({
     error: () => {/** some declarative error handling (eg. log to console and rethrow to global error reporting)*/}
 }));
 
-process.data$.subscribe(data => /** display data */);
+process.success$.subscribe(data => /** display data */);
 process.inProgress$.subscribe(isLoading => /** show/hide loader */);
 process.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
@@ -227,12 +188,17 @@ process.execute(() => delay(100).pipe(mergeMap(() => of(2)))).subscribe();
 
 The same options apply to BoundProcess.
 
-## Build
+## Development
+
+Clone and `npm install`
+
+### Test
+
+`npm run test`
+`npm run test:watch`
+
+### Build
 
 `npm run build`
 
 Bundle in `/lib`
-
-## Test
-
-`npm run test`
