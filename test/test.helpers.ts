@@ -215,8 +215,17 @@ export function createAfter$ (
    * The implementation is dumb
    *  - just make an observable that fires really late
    */
-  return cold('-------------------------1')
+  return cold('----------------------------------------------------1')
     .pipe(map(() => undefined));
+}
+
+export function executeAfter (
+  cold: ColdCreator,
+  pattern: string,
+  fn: () => unknown,
+): void {
+  cold(pattern)
+    .subscribe(fn);
 }
 
 export const expectToThrow = (
@@ -267,3 +276,29 @@ export const expectToNotThrow = (
       .to.equal((error as Error).message);
   }
 };
+
+export function fakeInterval (
+  cold: ColdCreator,
+  intervalTime: number,
+  duration: number,
+): Observable<string> {
+  let pattern = '';
+  nTimes(duration, () => {
+    nTimes(intervalTime, () => pattern += '-');
+    pattern += 't';
+  });
+
+  return cold(pattern);
+}
+
+export const nTimes = (
+  n: number,
+  callback: (n: number) => void,
+): void => {
+  for (let i = 0; i < n; ++i) {
+    callback(i);
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const noop = (): void => {};
