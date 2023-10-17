@@ -2,6 +2,7 @@ import {
   BehaviorSubject,
   EMPTY,
   Observable,
+  ReplaySubject,
   SubjectLike,
   throwError,
 } from 'rxjs';
@@ -10,6 +11,7 @@ import {
   concatMap,
   distinctUntilChanged,
   mergeMap,
+  share,
   switchMap,
   tap,
 } from 'rxjs/operators';
@@ -26,8 +28,6 @@ import {
 import {
   _throwToGlobalFn,
 } from './throw-error-to-global';
-
-// TODO - unsubscribing, error handling
 
 const changeBoth = (
   loadContext: ILoadContext,
@@ -105,6 +105,9 @@ export const createMergeProcess: CreateProcessFunction
           tap(() => {
             context.doChange(false, null);
           }),
+          (options?.share) ? share({
+            connector: () => new ReplaySubject<ReturnType>(1),
+          }) : tap(),
         );
       };
 
@@ -149,6 +152,9 @@ export const createConcatProcess: CreateProcessFunction
           tap(() => {
             context.doChange(false, null);
           }),
+          (options?.share) ? share({
+            connector: () => new ReplaySubject<ReturnType>(1),
+          }) : tap(),
         );
       };
 
@@ -193,6 +199,9 @@ export const createSwitchProcess: CreateProcessFunction
           tap(() => {
             context.doChange(false, null);
           }),
+          (options?.share) ? share({
+            connector: () => new ReplaySubject<ReturnType>(1),
+          }) : tap(),
         );
       };
 

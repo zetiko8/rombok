@@ -100,7 +100,7 @@ describe('unsubscribe', () => {
             });
         });
       });
-      it('remains if only one unsubscribes', () => {
+      it('remains if only one unsubscribes share = true', () => {
         scheduler.run(({ cold }) => {
           let numOfA = 0;
           let numOfB = 0;
@@ -111,7 +111,7 @@ describe('unsubscribe', () => {
                 tap(() => numOfA++),
               )
               .pipe(
-                wrap((spyWrapper.fn)),
+                wrap(spyWrapper.fn, { share: true }),
               );
           });
           const subscription
@@ -132,6 +132,42 @@ describe('unsubscribe', () => {
           createAfter$(cold)
             .subscribe(() => {
               expect(numOfA).to.equal(5);
+              expect(numOfB).to.equal(1);
+            });
+        });
+      });
+      it('remains if only one unsubscribes share = false', () => {
+        scheduler.run(({ cold }) => {
+          let numOfA = 0;
+          let numOfB = 0;
+          const spyWrapper = spy(sbx, () => fakeApiCall(cold('a')));
+          const wrapedProcess = mode.createProcess(wrap => {
+            return fakeInterval(cold, 1, 5)
+              .pipe(
+                tap(() => numOfA++),
+              )
+              .pipe(
+                wrap(spyWrapper.fn),
+              );
+          });
+          const subscription
+              = wrapedProcess.data$
+                .subscribe(() => numOfB++);
+          wrapedProcess.data$
+            .subscribe(noop);
+
+          cold('----t').subscribe(() => {
+            wrapedProcess.data$
+              .subscribe(noop);
+          });
+
+          cold('--t').subscribe(() => {
+            subscription.unsubscribe();
+          });
+
+          createAfter$(cold)
+            .subscribe(() => {
+              expect(numOfA).to.equal(11);
               expect(numOfB).to.equal(1);
             });
         });
