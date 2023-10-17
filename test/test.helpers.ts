@@ -9,7 +9,11 @@ import { catchError, map, take } from 'rxjs/operators';
 import * as chai from 'chai';
 import { SinonSandbox, SinonSpy } from 'sinon';
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
-import { CreateProcessFunction, Process } from '../src/index';
+import {
+  CreateProcessFunction,
+  Process,
+  WrapProcessOptions,
+} from '../src/index';
 import { assertDeepEqual } from '@zetiko8/rxjs-testing-helpers';
 
 const expect = chai.expect;
@@ -58,6 +62,7 @@ export const getProcessorTestReturns = (
   createProcessFunction: CreateProcessFunction,
   getProccesFn: () => (value: string) => Observable<string>,
   triggers: Observable<string>[],
+  options: WrapProcessOptions,
 ): ProcessorTestReturns => {
   const spyWrapper
     = spy(sbx, getProccesFn());
@@ -67,6 +72,7 @@ export const getProcessorTestReturns = (
       .pipe(
         wrap(
           (arg) => spyWrapper.fn(arg),
+          options,
         ),
       ),
   );
@@ -213,3 +219,51 @@ export function createAfter$ (
     .pipe(map(() => undefined));
 }
 
+export const expectToThrow = (
+  fn: () => unknown,
+): {
+  with: (errorMessage: string) => {
+      and: (assertOnErrorFunction: (error: Error) => void) => void;
+  };
+} => {
+  return {
+    with: (errorMessage: string) => {
+      try {
+        fn();
+      } catch (error) {
+        expect((error as Error).message)
+          .to.equal(errorMessage);
+
+        return {
+          and: (
+            assertOnErrorFunction: (error: Error) => void,
+          ) => {
+            assertOnErrorFunction(error as Error);
+          },
+        };
+      }
+
+      expect('{no error thrown}')
+        .to.equal(errorMessage);
+
+      return {
+        and: (
+          assertOnErrorFunction: (error: Error) => void,
+        ) => {
+          assertOnErrorFunction(null as unknown as Error);
+        },
+      };
+    },
+  };
+};
+
+export const expectToNotThrow = (
+  fn: () => unknown,
+): void => {
+  try {
+    fn();
+  } catch (error) {
+    expect('{no error thrown}')
+      .to.equal((error as Error).message);
+  }
+};

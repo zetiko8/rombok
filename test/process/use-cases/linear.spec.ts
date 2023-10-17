@@ -98,6 +98,7 @@ describe('linear', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,

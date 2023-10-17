@@ -78,6 +78,7 @@ describe('error sharing before error emit', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: getNormalTestReturns(
         sbx,

@@ -74,6 +74,7 @@ describe('loading sharing', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: getNormalTestReturns(
         sbx,

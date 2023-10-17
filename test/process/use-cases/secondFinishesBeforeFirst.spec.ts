@@ -101,6 +101,7 @@ describe('second finishes before first', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,

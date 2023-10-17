@@ -17,6 +17,7 @@ export interface CreateProcessFunction {
 
 export interface WrapProcessOptions {
   terminateOnError?: boolean,
+  throwErrorToGlobal?: boolean,
 }
 
 export interface WrapProcessOperator <Argument, ReturnType>{

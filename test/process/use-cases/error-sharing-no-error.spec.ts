@@ -74,6 +74,7 @@ describe('error sharing no error', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: getNormalTestReturns(
         sbx,

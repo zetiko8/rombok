@@ -102,6 +102,7 @@ describe('first and second fire at same time on the start and take no time', () 
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,

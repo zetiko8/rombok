@@ -3,6 +3,7 @@ import {
   EMPTY,
   Observable,
   SubjectLike,
+  throwError,
 } from 'rxjs';
 import {
   catchError,
@@ -22,6 +23,9 @@ import {
   CreatorCallback,
   WrapProcessOperator,
 } from './proccesor.types';
+import {
+  _throwToGlobalFn,
+} from './throw-error-to-global';
 
 // TODO - unsubscribing, error handling
 
@@ -55,6 +59,20 @@ const createContext = (
   };
 };
 
+const handleError = (
+  terminateOnError: boolean,
+  throwErrorToGlobal: boolean,
+  doChange: (inProgress: boolean, error: Error | null) => void,
+  error: Error,
+): Observable<never> => {
+  doChange(false, error);
+  if (throwErrorToGlobal) _throwToGlobalFn(error);
+  if (terminateOnError)
+    return throwError(() => error);
+  else
+    return EMPTY;
+};
+
 export const createMergeProcess: CreateProcessFunction
   = <Argument, ReturnType>(
     creator: CreatorCallback<Argument, ReturnType>,
@@ -69,6 +87,11 @@ export const createMergeProcess: CreateProcessFunction
         const context = createContext(new MergeLoadContext());
         inProgress$ = context.isLoading$;
         error$ = context.error$;
+        const boundHandleError
+          = handleError.bind(null,
+            !!(options?.terminateOnError),
+            !!(options?.throwErrorToGlobal),
+            context.doChange);
 
         return (
           source$: Observable<Argument>,
@@ -76,10 +99,7 @@ export const createMergeProcess: CreateProcessFunction
           mergeMap(arg => {
             context.doChange(true, null);
             return processFunction(arg).pipe(
-              catchError(error => {
-                context.doChange(false, error);
-                return EMPTY;
-              }),
+              catchError(err => boundHandleError(err)),
             );
           }),
           tap(() => {
@@ -111,6 +131,11 @@ export const createConcatProcess: CreateProcessFunction
         const context = createContext(new SwitchConcatLoadContext());
         inProgress$ = context.isLoading$;
         error$ = context.error$;
+        const boundHandleError
+          = handleError.bind(null,
+            !!(options?.terminateOnError),
+            !!(options?.throwErrorToGlobal),
+            context.doChange);
 
         return (
           source$: Observable<Argument>,
@@ -118,10 +143,7 @@ export const createConcatProcess: CreateProcessFunction
           concatMap(arg => {
             context.doChange(true, null);
             return processFunction(arg).pipe(
-              catchError(error => {
-                context.doChange(false, error);
-                return EMPTY;
-              }),
+              catchError(err => boundHandleError(err)),
             );
           }),
           tap(() => {
@@ -150,10 +172,14 @@ export const createSwitchProcess: CreateProcessFunction
     const wrap: WrapProcessOperator<Argument, ReturnType>
       = (processFunction, options) => {
 
-        // TODO - switch and concat loadContext seem to be interchangeable
         const context = createContext(new SwitchConcatLoadContext());
         inProgress$ = context.isLoading$;
         error$ = context.error$;
+        const boundHandleError
+          = handleError.bind(null,
+            !!(options?.terminateOnError),
+            !!(options?.throwErrorToGlobal),
+            context.doChange);
 
         return (
           source$: Observable<Argument>,
@@ -161,10 +187,7 @@ export const createSwitchProcess: CreateProcessFunction
           switchMap(arg => {
             context.doChange(true, null);
             return processFunction(arg).pipe(
-              catchError(error => {
-                context.doChange(false, error);
-                return EMPTY;
-              }),
+              catchError(err => boundHandleError(err)),
             );
           }),
           tap(() => {

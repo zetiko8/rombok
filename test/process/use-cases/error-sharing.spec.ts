@@ -78,6 +78,7 @@ describe('error sharing', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: getNormalTestReturns(
         sbx,

@@ -13,4 +13,10 @@ export { MULTIPLE_EXECUTIONS_STRATEGY } from './loading-handling';
 export {
   errorFirst,
   ErrorFirst,
+  errorFirstToResult,
+  errorFirstToError,
 } from './error-first';
+export {
+  throwErrorToGlobal,
+  throwErrorFirstToGlobal,
+} from './throw-error-to-global';

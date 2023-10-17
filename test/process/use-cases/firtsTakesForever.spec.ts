@@ -107,6 +107,7 @@ describe('first takes for ever', () => {
         createProcessFunction,
         getProccesFn,
         triggers,
+        wrapProcessOptions,
       ),
       normalOperator: {
         processFn: spyWrapperForNormalOperator.spy,
