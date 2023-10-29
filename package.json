@@ -1,55 +1,44 @@
 {
-  "name": "rombok",
-  "version": "0.7.0",
-  "description": "RxJs utils",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
-  "repository": "https://github.com/zetiko8/rombok",
-  "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
-  "private": false,
-  "keywords": [
-    "rxjs",
-    "rombok",
-    "wrapProcess",
-    "errorFirst observable",
-    "rxjs error handling",
-    "rxjs loading"
-  ],
+  "name": "rombok-workspace",
+  "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
-    "test": "mocha --config .mocharc.json test/**/*.spec.ts",
-    "test:watch": "mocha --config .mocharc.json --watch test/**/*.spec.ts",
-    "build": "rimraf lib && tsc",
-    "lint": "eslint",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run test"
+    "test": "nx run library:test --configuration=dev",
+    "release": "nx run library:test --configuration=ci && nx run library:build --configuration=production && nx run library:nx-release-publish"
   },
-  "dependencies": {
-    "rxjs": "^7.5.6"
-  },
+  "private": false,
   "devDependencies": {
-    "@types/chai": "^4.2.14",
-    "@types/mocha": "^8.0.4",
-    "@types/node": "^14.14.10",
+    "@nx/eslint-plugin": "16.10.0",
+    "@nx/jest": "16.10.0",
+    "@nx/js": "16.10.0",
+    "@nx/linter": "16.10.0",
+    "@types/chai": "^4.3.8",
+    "@types/jest": "^29.4.0",
+    "@types/node": "18.7.1",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.8",
-    "@typescript-eslint/eslint-plugin": "^4.8.2",
-    "@typescript-eslint/parser": "^4.8.2",
+    "@typescript-eslint/eslint-plugin": "^5.60.1",
+    "@typescript-eslint/parser": "^5.60.1",
+    "eslint": "~8.46.0",
+    "eslint-config-prettier": "8.1.0",
+    "jest": "^29.4.1",
+    "jest-environment-node": "^29.4.1",
+    "nx": "16.10.0",
+    "prettier": "^2.6.2",
+    "ts-jest": "^29.1.0",
+    "ts-node": "10.9.1",
+    "typescript": "~5.1.3",
+    "verdaccio": "^5.0.4",
     "@zetiko8/rxjs-testing-helpers": "^0.5.0",
     "chai": "^4.2.0",
-    "copyfiles": "^2.4.1",
-    "eslint": "^7.14.0",
-    "mocha": "^8.2.1",
-    "nodemon": "^2.0.6",
-    "rimraf": "^3.0.2",
     "sinon": "^14.0.0",
     "sinon-chai": "^3.7.0",
-    "snowpack": "^3.8.8",
-    "ts-node": "^9.0.0",
-    "ttypescript": "^1.5.12",
-    "typescript": "^4.1.2",
-    "typescript-transform-paths": "^2.1.0"
+    "tslib": "^2.3.0"
   },
-  "files": [
-    "lib/**/*"
-  ]
+  "workspaces": [
+    "packages/*"
+  ],
+  "nx": {
+    "includedScripts": []
+  }
 }

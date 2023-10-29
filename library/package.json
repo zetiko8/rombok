@@ -1,0 +1,29 @@
+{
+  "name": "rombok",
+  "version": "0.7.0",
+  "description": "RxJs utils",
+  "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zetiko8/rombok"
+  },
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "rxjs",
+    "rombok",
+    "wrapProcess",
+    "errorFirst observable",
+    "rxjs error handling",
+    "rxjs loading"
+  ],
+  "peerDependencies": {
+    "rxjs": "^7.5.6"
+  },
+  "type": "commonjs",
+  "main": "./dist/src/index.js",
+  "typings": "./dist/src/index.d.ts"
+}
