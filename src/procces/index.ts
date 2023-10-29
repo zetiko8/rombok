@@ -81,17 +81,17 @@ export class Process<T> implements IProcess<T> {
   }
 }
 
-export class BoundProcess<Arguments, ReturnType> implements IProcess<ReturnType> {
+export class BoundProcess<Argument, ReturnType> implements IProcess<ReturnType> {
 
     private _process: Process<ReturnType>;
     error$: Observable<Error | null>;
     inProgress$: Observable<boolean>;
     success$: Observable<ReturnType>;
 
-    private _processFunction: (...args: Arguments[]) => Observable<ReturnType>;
+    private _processFunction: (arg: Argument) => Observable<ReturnType>;
 
     constructor (
-      processFunction: (...args: Arguments[]) => Observable<ReturnType>,
+      processFunction: (arg: Argument) => Observable<ReturnType>,
       options: {
         multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY
@@ -107,10 +107,10 @@ export class BoundProcess<Arguments, ReturnType> implements IProcess<ReturnType>
       this._processFunction = processFunction;
     }
 
-    execute (...args: Arguments[]): Observable<ReturnType> {
+    execute (arg: Argument): Observable<ReturnType> {
       return this._process
         .execute(
-          () => this._processFunction(...args),
+          () => this._processFunction(arg),
         );
     }
 }
