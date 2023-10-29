@@ -1,6 +1,6 @@
 {
   "name": "rombok",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "RxJs utils",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -10,8 +10,10 @@
   "keywords": [
     "rxjs",
     "rombok",
-    "process",
-    "resource"
+    "wrapProcess",
+    "errorFirst observable",
+    "rxjs error handling",
+    "rxjs loading"
   ],
   "scripts": {
     "test": "mocha --config .mocharc.json test/**/*.spec.ts",

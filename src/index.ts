@@ -1,4 +1,20 @@
-export * from './procces';
+export {
+  /**
+   * @deprecated
+   * use CreateProcessFunction instead
+   */
+  IProcess,
+  /**
+   * @deprecated
+   * use CreateProcessFunction instead
+   */
+  BoundProcess,
+  /**
+   * @deprecated
+   * use CreateProcessFunction instead
+   */
+  Process,
+} from './procces';
 export {
   createMergeProcess,
   createConcatProcess,
@@ -9,7 +25,9 @@ export {
   WrapProcessOptions,
   WrapProcessOperator,
 } from './proccesor.types';
-export { MULTIPLE_EXECUTIONS_STRATEGY } from './loading-handling';
+export {
+  MULTIPLE_EXECUTIONS_STRATEGY,
+} from './loading-handling';
 export {
   errorFirst,
   ErrorFirst,

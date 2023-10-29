@@ -31,18 +31,6 @@ inProgress$.subscribe(isLoading => {/** show/hide loader */});
 error$.subscribe(errorOrNull => {/** show/hide error state */});
 ```
 
-```typescript
-import { Process } from 'rombok';
-
-const myProcess = new Process();
-
-$button.onclick = () => myProcess.execute(() => loadData()).subscribe();
-
-myProcess.success$.subscribe(data => /** display data */);
-myProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
-myProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
-```
-
 ## Api Reference
 
 ### wrapProcess
@@ -123,7 +111,7 @@ const switchProcess
 }
 ```
 
-### Process
+### Process (@Deprecated)
 `Process` is a stream holder, that includes success$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
 ```typescript
