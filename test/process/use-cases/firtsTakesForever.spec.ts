@@ -173,24 +173,27 @@ describe('first takes for ever', () => {
           { terminateOnError: false },
           concatMap as MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = '-----------------o-p-r';
+      const loadingP = 'f--t-----------------f';
+      const errorP   = 'n---------------------';
       expectObservable(process.success$)
-        .toBe('-----------------o--p--r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n------------------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--t-------------ft-ft-f', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(normalOperator.success$)
-        .toBe('-----------------o-p-r');
+        .toBe(successP);
 
       expectObservable(wrapProcess.success$)
-        .toBe('-----------------o-p-r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n------------------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('f--t-----------------f', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });

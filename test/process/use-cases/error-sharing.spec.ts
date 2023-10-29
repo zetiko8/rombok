@@ -107,9 +107,10 @@ describe('error sharing', () => {
           mergeMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
-      const sucessP  = '----o-----------r';
-      const errorP   = 'n-------e-----n';
-      const lateSub  = '----------s';
+      const sucessP       = '----o-----------r';
+      const errorP        = 'n-------e-----n--';
+      const lateSub       = '----------s';
+      const lateSubErrorP = '----------e---n--';
       expectObservable(process.success$)
         .toBe(sucessP);
       expectObservable(process.error$)
@@ -120,7 +121,7 @@ describe('error sharing', () => {
             mergeMap(() => process.error$),
           );
       expectObservable(lateProcessSub$)
-        .toBe('----------(ne)---n', { ...values, e: error });
+        .toBe(lateSubErrorP, { ...values, e: error });
 
       // wrapProcess
       expectObservable(wrapProcess.success$)
@@ -133,7 +134,7 @@ describe('error sharing', () => {
              mergeMap(() => wrapProcess.error$),
            );
       expectObservable(lateSub$)
-        .toBe('----------e---n', { ...values, e: error });
+        .toBe(lateSubErrorP, { ...values, e: error });
     });
   });
   it('concat', () => {
@@ -152,9 +153,10 @@ describe('error sharing', () => {
           concatMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
-      const sucessP  = '----o-----------r';
-      const errorP   = 'n-------e-----n';
-      const lateSub  = '----------s';
+      const sucessP       = '----o-----------r';
+      const errorP        = 'n-------e-----n--';
+      const lateSub       = '----------s';
+      const lateSubErrorP = '----------e---n--';
       expectObservable(process.success$)
         .toBe(sucessP);
       expectObservable(process.error$)
@@ -165,7 +167,7 @@ describe('error sharing', () => {
                   mergeMap(() => process.error$),
                 );
       expectObservable(lateProcessSub$)
-        .toBe('----------(ne)---n', { ...values, e: error });
+        .toBe(lateSubErrorP, { ...values, e: error });
 
       // wrapProcess
       expectObservable(wrapProcess.success$)
@@ -178,7 +180,7 @@ describe('error sharing', () => {
                    mergeMap(() => wrapProcess.error$),
                  );
       expectObservable(lateSub$)
-        .toBe('----------e---n', { ...values, e: error });
+        .toBe(lateSubErrorP, { ...values, e: error });
     });
   });
   it('switch', () => {

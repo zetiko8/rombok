@@ -170,24 +170,27 @@ describe('linear first errors, but second finishes before first', () => {
           concatMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = '------------p-r';
+      const loadingP = 'f--t----------f';
+      const errorP   = 'n---------(en)-';
       expectObservable(process.success$)
-        .toBe('-------------p--r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n---------en-----', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--t------ft-ft-f', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(normalOperator.success$)
-        .toBe('------------p-r');
+        .toBe(successP);
 
       expectObservable(wrapProcess.success$)
-        .toBe('------------p-r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n---------(en)--', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('f--t----------f', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });

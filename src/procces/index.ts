@@ -25,62 +25,10 @@ import {
   MULTIPLE_EXECUTIONS_STRATEGY,
 } from '../loading-handling';
 import { randomString } from '../helpers';
-
-class Pipeline<T> {
-  private readonly line: {
-    execute$: Subject<0|1>,
-    result$: Observable<T>
-  }[] = [];
-
-  add (load$: Observable<T>): Observable<T> {
-    const execute$ = new ReplaySubject<0|1>(1);
-    const result$ = execute$.pipe(
-      mergeMap(delayTime => {
-        return of(1)
-          .pipe(delay(delayTime));
-      }),
-      mergeMap(() => load$),
-      catchError(err => {
-        let index!: number;
-        this.line.find((v, i) => {
-          const found = v.execute$ === execute$;
-          if (found) index = i;
-          return found;
-        });
-        this.finishPipeItem(index);
-        return throwError(() => err);
-      }),
-      tap(() => {
-        let index!: number;
-        this.line.find((v, i) => {
-          const found = v.execute$ === execute$;
-          if (found) index = i;
-          return found;
-        });
-        this.finishPipeItem(index);
-      }),
-    );
-    this.line.push({
-      execute$,
-      result$,
-    });
-
-    if (this.line.length === 1) {
-      this.executeNext(0);
-    }
-
-    return result$;
-  }
-
-  private executeNext (type: 0|1) {
-    this.line[0].execute$.next(type);
-  }
-
-  private finishPipeItem (index: number) {
-    this.line.splice(index, 1);
-    if (this.line.length !== 0) this.executeNext(1);
-  }
-}
+import {
+  createConcatProcess,
+  createMergeProcess,
+} from '../proccesor';
 
 export interface IProcess<T> {
   error$: Observable<Error | null>;
@@ -96,111 +44,72 @@ interface UnboundProcess<T> extends IProcess<T> {
 }
 
 export class ConcatMapProcess<T> implements UnboundProcess<T> {
-    private _loadContext
-      = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.CONCAT_MAP);
-    public inProgress$
-      = this._loadContext.isLoading$
-        .pipe(
-          startWith(false),
-          observeOn(asyncScheduler),
-          distinctUntilChanged(),
-        );
-    private _error$ = new ReplaySubject<null | Error>(1);
-    public error$ = this._error$
-      .pipe(
-        startWith(null),
-        observeOn(asyncScheduler),
-        distinctUntilChanged(),
-      );
-    private readonly _success$ = new Subject<T>();
-    public readonly success$
-     = this._success$
-       .pipe(
-         observeOn(asyncScheduler),
-         distinctUntilChanged(),
-       );
-    private readonly _pipeline$ = new Pipeline<T>();
+  private readonly _trigger$
+    = new ReplaySubject<() => Observable<T>>(1);
+  public readonly success$: Observable<T>;
+  public readonly error$: Observable<Error | null>;
+  public readonly inProgress$: Observable<boolean>;
 
-    execute (
-      processFunction: () => Observable<T>,
-    ): Observable<T> {
-      const load$: Observable<T> = of('immediate')
-        .pipe(
-          observeOn(asyncScheduler),
-          tap(() => {
-            this._error$.next(null);
-            this._loadContext.registerLoading('');
-          }),
-          switchMap(
-            () => processFunction()
-              .pipe(take(1)),
-          ),
-          catchError(error => {
-            this._loadContext.registerLoadEnd('');
-            this._error$.next(error);
-            return throwError(error);
-          }),
-          tap((result) => {
-            this._error$.next(null);
-            this._success$.next(result);
-            this._loadContext.registerLoadEnd('');
-          }),
-        );
+  constructor () {
+    const mergeProcess = createConcatProcess<() => Observable<T>, T>(
+      wrap => {
+        return this._trigger$
+          .pipe(
+            wrap(fn => {
+              return fn();
+            }, {
+              share: true,
+            }),
+          );
+      },
+    );
+    this.success$ = mergeProcess.data$;
+    this.error$ = mergeProcess.error$;
+    this.inProgress$ = mergeProcess.inProgress$;
+  }
 
-      return this._pipeline$.add(load$);
-    }
+  execute (
+    processFunction: () => Observable<T>,
+  ): Observable<T> {
+    const obs$
+      = this.success$.pipe(take(1));
+    this._trigger$.next(processFunction);
+    return obs$;
+  }
 }
 export class MergeMapProcess<T> implements UnboundProcess<T> {
-    private _loadContext
-     = new LoadContext(MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP);
-    public inProgress$
-     = this._loadContext.isLoading$
-       .pipe(
-         startWith(false),
-         observeOn(asyncScheduler),
-         distinctUntilChanged(),
-       );
-    private _error$ = new ReplaySubject<null | Error>(1);
-    public error$ = this._error$
-      .pipe(
-        startWith(null),
-        observeOn(asyncScheduler),
-        distinctUntilChanged(),
-      );
-    private readonly _success$ = new Subject<T>();
-    public readonly success$
-     = this._success$
-       .pipe(
-         observeOn(asyncScheduler),
-         distinctUntilChanged(),
-       );
+  private readonly _trigger$
+    = new ReplaySubject<() => Observable<T>>(1);
+  public readonly success$: Observable<T>;
+  public readonly error$: Observable<Error | null>;
+  public readonly inProgress$: Observable<boolean>;
 
-    execute (
-      processFunction: () => Observable<T>,
-    ): Observable<T> {
-      return of('immediate')
-        .pipe(
-          observeOn(asyncScheduler),
-          tap(() => {
-            this._error$.next(null);
-            this._loadContext.registerLoading('');
-          }),
-          switchMap(
-            () => processFunction()
-              .pipe(take(1)),
-          ),
-          catchError(error => {
-            this._loadContext.registerLoadEnd('');
-            this._error$.next(error);
-            return throwError(error);
-          }),
-          tap((result) => {
-            this._error$.next(null);
-            this._success$.next(result);
-            this._loadContext.registerLoadEnd('');
-          }),
-        );
-    }
+  constructor () {
+    const mergeProcess = createMergeProcess<() => Observable<T>, T>(
+      wrap => {
+        return this._trigger$
+          .pipe(
+            wrap(fn => {
+              return fn();
+            }, {
+              share: true,
+            }),
+          );
+      },
+    );
+    this.success$ = mergeProcess.data$;
+    this.error$ = mergeProcess.error$;
+    this.inProgress$ = mergeProcess.inProgress$;
+  }
+
+  execute (
+    processFunction: () => Observable<T>,
+  ): Observable<T> {
+    const obs$
+      = this.success$.pipe(take(1));
+    this._trigger$.next(processFunction);
+    return obs$;
+  }
 }
 
 export class SwitchMapProcess<T> implements UnboundProcess<T> {

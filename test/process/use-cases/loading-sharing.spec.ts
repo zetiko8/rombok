@@ -104,6 +104,7 @@ describe('loading sharing', () => {
 
       const sucessP  = '-----o-------r';
       const loadingP = 'f-t--f----t--f';
+      const lateSubLoadingP  = '---t-f----t--f';
       const lateSub  = '---s';
       expectObservable(process.success$)
         .toBe(sucessP);
@@ -115,7 +116,7 @@ describe('loading sharing', () => {
             mergeMap(() => process.inProgress$),
           );
       expectObservable(lateProcessSub$)
-        .toBe('---(ft)-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
 
       // wrapProcess
       expectObservable(wrapProcess.success$)
@@ -128,7 +129,7 @@ describe('loading sharing', () => {
              mergeMap(() => wrapProcess.inProgress$),
            );
       expectObservable(lateSub$)
-        .toBe('---t-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
     });
   });
   it('concat', () => {
@@ -148,6 +149,7 @@ describe('loading sharing', () => {
 
       const sucessP  = '-----o-------r';
       const loadingP = 'f-t--f----t--f';
+      const lateSubLoadingP  = '---t-f----t--f';
       const lateSub  = '---s';
       expectObservable(process.success$)
         .toBe(sucessP);
@@ -159,7 +161,7 @@ describe('loading sharing', () => {
             mergeMap(() => process.inProgress$),
           );
       expectObservable(lateProcessSub$)
-        .toBe('---(ft)-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
 
       // wrapProcess
       expectObservable(wrapProcess.success$)
@@ -172,7 +174,7 @@ describe('loading sharing', () => {
                mergeMap(() => wrapProcess.inProgress$),
              );
       expectObservable(lateSub$)
-        .toBe('---t-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
     });
   });
   it('switch', () => {

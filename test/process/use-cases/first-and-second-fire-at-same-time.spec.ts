@@ -171,24 +171,27 @@ describe('first and second fire at same time', () => {
           concatMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = '----op------r';
+      const loadingP = 'f--t-f-----tf';
+      const errorP   = 'n------------';
       expectObservable(process.success$)
-        .toBe('----o-p-----r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('f--tftf----tf', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(normalOperator.success$)
-        .toBe('----op------r');
+        .toBe(successP);
 
       expectObservable(wrapProcess.success$)
-        .toBe('----op------r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('f--t-f-----tf', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });

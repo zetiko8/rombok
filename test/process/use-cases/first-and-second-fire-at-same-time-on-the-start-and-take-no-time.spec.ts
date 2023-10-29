@@ -14,6 +14,7 @@ import {
   ColdCreator,
   fakeApiCall,
   getProcessorTestReturns,
+  getProcessTestReturns,
   MultipleExecutionsStrategyOperator,
   prepareTestScheduler,
   spy,
@@ -29,7 +30,6 @@ import {
   switchMap,
 } from 'rxjs/operators';
 import { EMPTY,  merge } from 'rxjs';
-import { ignoreErrorSub } from '@zetiko8/rxjs-testing-helpers';
 
 /**
  * Check what happens if everything happens
@@ -65,18 +65,9 @@ describe('first and second fire at same time on the start and take no time', () 
     const getProccesFn = () => (value: string) => {
       return fakeApiCall(cold<string>(value));
     };
-    const spyWrapper = spy(sbx, getProccesFn());
-    function onWrite (value: string) {
-      process.execute(
-        () => spyWrapper.fn(value))
-        .subscribe(ignoreErrorSub);
-    }
 
     const spyWrapperForNormalOperator
       = spy(sbx, getProccesFn());
-
-    // user writes
-    triggers.forEach(t => t.subscribe(onWrite));
 
     const normalData$ = merge(...triggers)
       .pipe(
@@ -94,9 +85,12 @@ describe('first and second fire at same time on the start and take no time', () 
       .pipe(map(() => undefined));
 
     return {
-      processLegacy: {
-        processFn: spyWrapper.spy,
-      },
+      processLegacy: getProcessTestReturns(
+        sbx,
+        process,
+        getProccesFn,
+        triggers,
+      ),
       wrapProcess: getProcessorTestReturns(
         sbx,
         createProcessFunction,
@@ -131,19 +125,21 @@ describe('first and second fire at same time on the start and take no time', () 
           mergeMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = '(op)----------r';
+      const errorP   = 'n------------';
       expectObservable(process.success$)
-        .toBe('(op)----------r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('(ftf)----------(tf)', values);
+        .toBe('f----------(tf)', values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(wrapProcess.success$)
-        .toBe('(op)----------r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
         .toBe('(tf)----------(tf)', values);
       after.subscribe(() =>
@@ -169,24 +165,27 @@ describe('first and second fire at same time on the start and take no time', () 
           concatMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = '(op)----------r';
+      const loadingP = '(tf)----------(tf)';
+      const errorP   = 'n------------';
       expectObservable(process.success$)
-        .toBe('op---------r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('(ftf)(tf)---------(tf)', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(normalOperator.success$)
-        .toBe('(op)----------r');
+        .toBe(successP);
 
       expectObservable(wrapProcess.success$)
-        .toBe('(op)----------r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
-        .toBe('(tf)----------(tf)', values);
+        .toBe(loadingP, values);
       after.subscribe(() =>
         assertCallCount(wrapProcess.processFn, 3));
     });
