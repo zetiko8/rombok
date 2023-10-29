@@ -15,7 +15,7 @@ import {
 } from '../proccesor';
 import {
   CreateProcessFunction,
-} from 'src/proccesor.types';
+} from '../proccesor.types';
 
 export interface IProcess<T> {
   error$: Observable<Error | null>;
@@ -83,34 +83,34 @@ export class Process<T> implements IProcess<T> {
 
 export class BoundProcess<Argument, ReturnType> implements IProcess<ReturnType> {
 
-    private _process: Process<ReturnType>;
-    error$: Observable<Error | null>;
-    inProgress$: Observable<boolean>;
-    success$: Observable<ReturnType>;
+  private _process: Process<ReturnType>;
+  error$: Observable<Error | null>;
+  inProgress$: Observable<boolean>;
+  success$: Observable<ReturnType>;
 
-    private _processFunction: (arg: Argument) => Observable<ReturnType>;
+  private _processFunction: (arg: Argument) => Observable<ReturnType>;
 
-    constructor (
-      processFunction: (arg: Argument) => Observable<ReturnType>,
-      options: {
+  constructor (
+    processFunction: (arg: Argument) => Observable<ReturnType>,
+    options: {
         multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY
       } = {
-        multipleExecutionsStrategy:
+      multipleExecutionsStrategy:
           MULTIPLE_EXECUTIONS_STRATEGY.MERGE_MAP,
-      },
-    ) {
-      this._process = new Process(options);
-      this.error$ = this._process.error$;
-      this.inProgress$ = this._process.inProgress$;
-      this.success$ = this._process.success$;
-      this._processFunction = processFunction;
-    }
+    },
+  ) {
+    this._process = new Process(options);
+    this.error$ = this._process.error$;
+    this.inProgress$ = this._process.inProgress$;
+    this.success$ = this._process.success$;
+    this._processFunction = processFunction;
+  }
 
-    execute (arg: Argument): Observable<ReturnType> {
-      return this._process
-        .execute(
-          () => this._processFunction(arg),
-        );
-    }
+  execute (arg: Argument): Observable<ReturnType> {
+    return this._process
+      .execute(
+        () => this._processFunction(arg),
+      );
+  }
 }
