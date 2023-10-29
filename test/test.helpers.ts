@@ -183,13 +183,25 @@ export function assertCallCount (
   spy: SinonSpy,
   callCount: number,
 ): void {
-  expect(spy.callCount)
-    .to.equal(callCount, 'Expected call count');
+  try {
+    expect(spy.callCount)
+      .to.equal(callCount, 'Expected call count');
+  } catch (error) {
+    (error as Error).stack = '';
+    throw error;
+  }
 }
 
 export function prepareTestScheduler (): TestScheduler {
   return new TestScheduler(
-    (actual, expected) => assertDeepEqual(actual, expected));
+    (actual, expected) => {
+      try {
+        return assertDeepEqual(actual, expected);
+      } catch (error) {
+        (error as Error).stack = '';
+        throw error;
+      }
+    });
 }
 
 export const ignoreErrorSub = {
