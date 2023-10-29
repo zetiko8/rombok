@@ -192,9 +192,10 @@ describe('loading sharing', () => {
           switchMap as
             MultipleExecutionsStrategyOperator<string, string>);
 
-      const sucessP  = '-----o-------r';
-      const loadingP = 'f-t--f----t--f';
-      const lateSub  = '---s';
+      const sucessP          = '-----o-------r';
+      const loadingP         = 'f-t--f----t--f';
+      const lateSub          = '---s';
+      const lateSubLoadingP  = '---t-f----t--f';
       expectObservable(process.success$)
         .toBe(sucessP);
       expectObservable(process.inProgress$)
@@ -205,7 +206,7 @@ describe('loading sharing', () => {
             mergeMap(() => process.inProgress$),
           );
       expectObservable(lateProcessSub$)
-        .toBe('---(ft)-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
 
       // wrapProcess
       expectObservable(wrapProcess.success$)
@@ -218,7 +219,7 @@ describe('loading sharing', () => {
                mergeMap(() => wrapProcess.inProgress$),
              );
       expectObservable(lateSub$)
-        .toBe('---t-f----t--f', values);
+        .toBe(lateSubLoadingP, values);
     });
   });
 });

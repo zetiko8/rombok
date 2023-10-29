@@ -208,19 +208,21 @@ describe('first and second fire at same time on the start and take no time', () 
           switchMap as
           MultipleExecutionsStrategyOperator<string, string>);
 
+      const successP = 'p----------r';
+      const errorP   = 'n-----------';
       expectObservable(process.success$)
-        .toBe('p----------r');
+        .toBe(successP);
       expectObservable(process.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(process.inProgress$)
-        .toBe('(ftf)----------(tf)', values);
+        .toBe('f----------(tf)', values);
       after.subscribe(() =>
         assertCallCount(processLegacy.processFn, 3));
 
       expectObservable(wrapProcess.success$)
-        .toBe('p----------r');
+        .toBe(successP);
       expectObservable(wrapProcess.error$)
-        .toBe('n------------', { ...values, e: error });
+        .toBe(errorP, { ...values, e: error });
       expectObservable(wrapProcess.inProgress$)
         .toBe('(tf)----------(tf)', values);
       after.subscribe(() =>
