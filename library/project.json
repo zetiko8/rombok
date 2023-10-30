@@ -4,14 +4,40 @@
   "sourceRoot": "library/src",
   "projectType": "library",
   "targets": {
-    "build": {
+    "clean": {
+      "executor": "nx:run-script",
+      "options": {
+        "script": "clean"
+      }
+    },
+    "clean:bundle": {
+      "command": "node tools/scripts/remove-package.json.mjs"
+    },
+    "build-esm": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "library/dist",
         "main": "library/src/index.ts",
-        "tsConfig": "library/tsconfig.lib.json",
-        "assets": ["library/*.md"]
+        "tsConfig": "library/tsconfig.esm.json",
+        "outputPath": "library/dist/esm"
+      }
+    },
+    "build-cjs": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "main": "library/src/index.ts",
+        "tsConfig": "library/tsconfig.cjs.json",
+        "outputPath": "library/dist/cjs"
+      }
+    },
+    "build-types": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "main": "library/src/index.ts",
+        "tsConfig": "library/tsconfig.types.json",
+        "outputPath": "library/dist/types"
       }
     },
     "publish": {

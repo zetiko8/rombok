@@ -2,15 +2,26 @@
   "compileOnSave": false,
   "compilerOptions": {
     "rootDir": ".",
+    "strict": true,
+    "preserveConstEnums": true,
+    "removeComments": true,
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": ["es2020", "dom"],
+    "stripInternal": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "target": "esnext",
+    "lib": [
+      "es2020", 
+      "dom"
+    ],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
@@ -18,5 +29,8 @@
       "@zetiko8/rombok": ["library/src/index.ts"]
     }
   },
-  "exclude": ["node_modules", "tmp"]
+  "exclude": [
+    "node_modules", 
+    "tmp"
+  ]
 }

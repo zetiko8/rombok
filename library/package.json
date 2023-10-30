@@ -1,6 +1,6 @@
 {
   "name": "rombok",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "RxJs utils",
   "author": "Anže Kolšek <anze.kolsek@@gmail.com>",
   "license": "MIT",
@@ -21,9 +21,34 @@
     "rxjs loading"
   ],
   "peerDependencies": {
-    "rxjs": "^7.5.6"
+    "rxjs": "^6.5.3 || ^7.4.0"
   },
   "type": "commonjs",
-  "main": "./dist/src/index.js",
-  "typings": "./dist/src/index.d.ts"
+  "main": "./dist/cjs/src/index.js",
+  "module": "./dist/esm/src/index.js",
+  "types": "./dist/types/src/index.d.ts",
+  "typesVersions": {
+    ">=4.2": {
+      "*": [
+        "dist/types/src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/index.d.ts",
+      "node": "./dist/cjs/src/index.js",
+      "require": "./dist/cjs/src/index.js",
+      "default": "./dist/esm/src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "shx rm -rf ./dist"
+  }
 }
