@@ -10,7 +10,7 @@ Rombok is a library that like Lombok in java, offers less verbose solutions for 
 
 ```typescript
 import { of, delay, BehaviorSubject } from 'rxjs';
-import { createMergeProcess } from '../../src/index';
+import { createMergeProcess } from 'rombok';
 
 const loadTableData
   = (page: number) => of({ foo: 'bar', page }).pipe(delay(1000));
@@ -40,7 +40,7 @@ error$.subscribe(errorOrNull => {/** show/hide error state */});
 
 ```typescript
 import { of } from 'rxjs';
-import { createMergeProcess } from '../../src/index';
+import { createMergeProcess } from 'rombok';
 
 const { 
     data$, // the resolved value
@@ -80,7 +80,7 @@ Use `createConcatProcess`, `createSwitchProcess` for handling concurrent request
 
 ```typescript
 import { of } from 'rxjs';
-import { createMergeProcess, createConcatProcess, createSwitchProcess  } from '../../src/index';
+import { createMergeProcess, createConcatProcess, createSwitchProcess  } from 'rombok';
 
 const mergeProcess
       = createMergeProcess<string, string>(
@@ -117,6 +117,8 @@ const switchProcess
 `Process` is a stream holder, that includes success$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
 ```typescript
+import { Process } from 'rombok';
+
 const process = new Process();
 
 process.execute(() => fromFetch('https://url')).subscribe({
@@ -132,12 +134,16 @@ process.error$.subscribe(errorOrNull => /** show/hide error state */);
 #### BoundProcess
 Is same as process, but the loading function is always the same. With process one can do the following:
 ```typescript
+import { Process } from 'rombok';
+
 const process = new Process();
 $button1.onclick = () => process.execute(() => fromFetch('url1')).subscribe();
 $button2.onclick = () => process.execute(() => fromFetch('url2')).subscribe();
 ```
 With bound process you can reuse the common logic - less code.
 ```typescript
+import { BoundProcess } from 'rombok';
+
 const process = new BoundProcess(url => fromFetch(url));
 $button1.onclick = () => process.execute('url1').subscribe();
 $button2.onclick = () => process.execute('url2').subscribe();
