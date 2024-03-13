@@ -38,3 +38,7 @@ export {
   throwErrorToGlobal,
   throwErrorFirstToGlobal,
 } from './throw-error-to-global';
+export {
+  BoundProcess2,
+  BoundProcess2 as AsyncProcess,
+} from './improved-process';
