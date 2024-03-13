@@ -8,13 +8,15 @@ export {
    * @deprecated
    * use CreateProcessFunction instead
    */
-  BoundProcess,
+  Process,
+} from './procces';
+export {
   /**
    * @deprecated
    * use CreateProcessFunction instead
    */
-  Process,
-} from './procces';
+  BoundProcess,
+} from './legacy/src/index';
 export {
   createMergeProcess,
   createConcatProcess,
