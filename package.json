@@ -1,6 +1,6 @@
 {
   "name": "rombok-workspace",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "license": "MIT",
   "scripts": {
     "clean": "shx rm -rf ./library/dist",

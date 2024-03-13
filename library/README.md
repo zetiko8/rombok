@@ -8,109 +8,23 @@ Rombok is a library that like Lombok in java, offers less verbose solutions for 
 `npm i rombok`
 ```
 
-```typescript
-import { of, delay, BehaviorSubject } from 'rxjs';
-import { createMergeProcess } from 'rombok';
-
-const loadTableData
-  = (page: number) => of({ foo: 'bar', page }).pipe(delay(1000));
-
-const paging$ = new BehaviorSubject(1);
-const { data$, inProgress$, error$ }
-      = createMergeProcess<number, { foo: string, page: number }>(
-        wrap => paging$
-          .pipe(
-            wrap(
-              (page) => loadTableData(page),
-              { share: true, terminateOnError: false },
-            ),
-          ));
-
-$nextPageButton.onclick = () => paging$.next(paging$.value + 1);
-
-data$.subscribe(data => {/** display data */});
-inProgress$.subscribe(isLoading => {/** show/hide loader */});
-error$.subscribe(errorOrNull => {/** show/hide error state */});
-```
-
-## Api Reference
-
-### wrapProcess
-`CreateProcessFunction`s provide a wrapper around async processes for accessing their data$, inProgress$ and error$ state.
+## Api reference
+### AsyncProcess
+`AsyncProcess` is a wrapper around an asynchronous observable, that includes data$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
 ```typescript
-import { of } from 'rxjs';
-import { createMergeProcess } from 'rombok';
+import { AsyncProcess } from 'rombok';
 
-const { 
-    data$, // the resolved value
-    inProgress$, // true / false
-    error$  // Error / null
-}
-        // generic <Argument> and <ReturnType> need to be provided
-      = createMergeProcess<string, string>(
-        wrap => trigger$ // trigger (Observable<Argument>)
-          .pipe(
-            wrap(
-              // a function that returns an Observable<ReturnType>
-              (arg) => of('foo'),
-              // options <WrapProcessOptions>
-              { 
-                // share results to different subscribers
-                // see rxjs multicasting
-                // by default - false
-                share: false,
-                // invoke subscribers.error function
-                // when an error is emitted and terminate the stream.
-                // If set to false, the error will be swallowed and
-                // the stream will keep emitting on trigger$.next
-                // by default - false
-                terminateOnError: true,
-                // throw any error emitted to global scope
-                // (for use in case of global error handling)
-                throwErrorToGlobal: false,
-              },
-            ),
-          ));
-```
-#### Handle multiple request at the same time
+const asyncProcess = new AsyncProcess(endpoint => fromFetch('https://url/' + endpoint));
 
-Use `createMergeProcess` for handling concurrent requests like `mergeMap` handles them.
-Use `createConcatProcess`, `createSwitchProcess` for handling concurrent requests like `concatMap`, `switchMap` accordingly.
+$button.onclick = () => asyncProcess.execute('todos').subscribe({
+    next: () => {/** some declarative logic */},
+    error: () => {/** some declarative error handling  */},
+});
 
-```typescript
-import { of } from 'rxjs';
-import { createMergeProcess, createConcatProcess, createSwitchProcess  } from 'rombok';
-
-const mergeProcess
-      = createMergeProcess<string, string>(
-        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
-const concatProcess
-      = createConcatProcess<string, string>(
-        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
-const switchProcess
-      = createSwitchProcess<string, string>(
-        wrap => trigger$.pipe(wrap((arg) => of('foo'))));
-```
-
-#### WrapProcessOptions
-
-```typescript
-{ 
-  // share results to different subscribers
-  // see rxjs multicasting
-  // by default - false
-  share: false,
-  // invoke subscribers.error function
-  // when an error is emitted and terminate the stream.
-  // If set to false, the error will be swallowed and
-  // the stream will keep emitting on trigger$.next
-  // by default - false
-  terminateOnError: true,
-  // throw any error emitted to global scope
-  // (for use in case of global error handling)
-  throwErrorToGlobal: false,
-}
+asyncProcess.data$.subscribe(data => /** display data */);
+asyncProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
+asyncProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
 ### Process (@Deprecated)
