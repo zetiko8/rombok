@@ -1,5 +1,5 @@
 import { Observable, ReplaySubject, Subject, combineLatest, throwError } from 'rxjs';
-import { catchError, distinctUntilChanged, map, startWith, takeUntil, tap } from 'rxjs/operators';
+import { catchError, distinctUntilChanged, map, share, startWith, takeUntil, tap } from 'rxjs/operators';
 
 export function combineLoaders (
   loaders: Observable<boolean>[],
@@ -65,6 +65,15 @@ export class BoundProcess2 <Argument, ReturnType> {
     data: Argument,
   ) => {
     return this.loadInternal(data);
+  };
+
+  public share = (
+    data: Argument,
+  ) => {
+    return this.loadInternal(data)
+      .pipe(
+        share({ connector: () => new ReplaySubject<ReturnType>(1) }),
+      );
   };
 
   constructor (

@@ -27,6 +27,22 @@ asyncProcess.inProgress$.subscribe(isLoading => /** show/hide loader */);
 asyncProcess.error$.subscribe(errorOrNull => /** show/hide error state */);
 ```
 
+#### AsyncProcess.share
+`AsyncProcess.share` is same as `AsyncProcess.execute` but the returned observable
+is shared preventing duplicated api calls.
+
+```typescript
+import { AsyncProcess } from 'rombok';
+
+const asyncProcess = new AsyncProcess(
+    endpoint => fromFetch('https://url/' + endpoint));
+
+const shared$ = asyncProcess.share('todos')
+
+shared$.subscribe(data => /** display data in one part of GUI */);
+shared$.subscribe(data => /** display data in another part of GUI */);
+```
+
 ### Process (@Deprecated)
 `Process` is a stream holder, that includes success$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
