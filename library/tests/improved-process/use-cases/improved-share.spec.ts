@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-function */
 import {
-  BoundProcess2,
+  AsyncProcess,
 } from '../../../src';
 import { TestScheduler } from 'rxjs/testing';
 import { createSandbox, SinonSandbox } from 'sinon';
@@ -26,7 +26,7 @@ describe('AsyncProcess.share()', () => {
           api: (arg: string) => cold('-a'),
         };
         const process
-         = new BoundProcess2<string, string>(arg => SERVICE.api(arg));
+         = new AsyncProcess<string, string>(arg => SERVICE.api(arg));
 
         const sub$ = process.share('a');
 
@@ -41,7 +41,7 @@ describe('AsyncProcess.share()', () => {
           api: (arg: string) => cold('-a'),
         };
         const process
-         = new BoundProcess2<string, string>(arg => SERVICE.api(arg));
+         = new AsyncProcess<string, string>(arg => SERVICE.api(arg));
 
         const sub$ = process.share('a');
 
