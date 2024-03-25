@@ -43,6 +43,24 @@ shared$.subscribe(data => /** display data in one part of GUI */);
 shared$.subscribe(data => /** display data in another part of GUI */);
 ```
 
+#### AsyncProcess.(static)on
+`AsyncProcess.on` returns an `AsyncProcessLike` that is triggered by the given `trigger$` observable.
+
+```typescript
+import { AsyncProcess } from 'rombok';
+import { Subject } from 'rxjs';
+
+const trigger$ = new Subject<string>();
+const asyncProcess = new AsyncProcess.on(
+    trigger$,
+    endpoint => fromFetch('https://url/' + endpoint),
+);
+
+const shared$ = asyncProcess.share('todos')
+
+shared$.subscribe(data => /** display data in GUI */);
+```
+
 ### Process (@Deprecated)
 `Process` is a stream holder, that includes success$, inProgress$ and error$ stream with which the lifecycle of an async process can be described.
 
